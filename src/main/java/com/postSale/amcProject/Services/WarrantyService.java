@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class WarrantyService {
@@ -22,7 +23,11 @@ public class WarrantyService {
     }
 
     @Transactional(readOnly = true)
-    public List<Warranty> getExpiringWarrantiesById(String custId) {
-        return warrantyRepository.findWarrantiesByCustomerId(custId);
+    public Optional<List<Warranty>> getExpiringWarrantiesById(String custId) {
+        List<Warranty> warranties = warrantyRepository.findWarrantiesById(custId);
+        if (warranties.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(warranties);
     }
 }

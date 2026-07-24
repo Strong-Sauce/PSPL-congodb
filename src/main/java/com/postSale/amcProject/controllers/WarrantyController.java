@@ -2,6 +2,7 @@ package com.postSale.amcProject.controllers;
 
 import com.postSale.amcProject.Model.nodes.Warranty;
 import com.postSale.amcProject.Services.WarrantyService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,12 +18,14 @@ public class WarrantyController {
     }
 
     @GetMapping
-    public List<Warranty> getAllSoonExpiring() {
-        return warrantyService.getExpiringWarranties();
+    public ResponseEntity<List<Warranty>> getAllSoonExpiring() {
+        return ResponseEntity.ok(warrantyService.getExpiringWarranties());
     }
 
     @GetMapping("/{id}")
-    public List<Warranty> getSoonExpiringById(@PathVariable String id) {
-        return warrantyService.getExpiringWarrantiesById(id);
+    public ResponseEntity<List<Warranty>> getSoonExpiringById(@PathVariable String id) {
+        return warrantyService.getExpiringWarrantiesById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

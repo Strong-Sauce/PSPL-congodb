@@ -20,10 +20,10 @@ export class HomeComponent implements OnInit {
   allProducts = signal<Product[]>([]);
   productSearch = signal('');
   productPage = signal(0);
-  readonly productPageSize = 6;
+  readonly productPageSize = 5;
 
   filteredProducts = computed(() => {
-    const term = this.productSearch().toLowerCase();
+    const term = this.productSearch().trim().toLowerCase();
     return this.allProducts().filter((p) => {
       return (
         p.productName.toLowerCase().includes(term) ||
@@ -45,10 +45,10 @@ export class HomeComponent implements OnInit {
   allWarranties = signal<Warranty[]>([]);
   warrantySearch = signal('');
   warrantyPage = signal(0);
-  readonly warrantyPageSize = 6;
+  readonly warrantyPageSize = 5;
 
   filteredWarranties = computed(() => {
-    const term = this.warrantySearch().toLowerCase();
+    const term = this.warrantySearch().trim().toLowerCase();
     return this.allWarranties().filter(w =>
       w.warrantyEndDate.toLowerCase().includes(term) ||
       w.warrantyStartDate.toLowerCase().includes(term)

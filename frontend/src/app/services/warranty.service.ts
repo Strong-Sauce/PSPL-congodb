@@ -13,8 +13,8 @@ export class WarrantyService {
     return this.http.get<Warranty[]>(this.baseUrl);
   }
 
-  getByCustomerId(custId: string): Observable<Warranty[]> {
-    return this.http.get<Warranty[]>(`${this.baseUrl}/${custId}`);
+  getByWarrantyId(warrantyId: string): Observable<Warranty[]> {
+    return this.http.get<Warranty[]>(`${this.baseUrl}/${warrantyId}`);
   }
 }
 
