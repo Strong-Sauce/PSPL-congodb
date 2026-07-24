@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Product } from '../../models';
+import { ProductCategory, Product } from '../../models/product.model';
 import { ProductService } from '../../services/product.service';
 
 @Component({
@@ -16,12 +16,13 @@ export class ProductCreateComponent {
   private readonly router = inject(Router);
 
   productName = signal('');
-  productSerialNumber = signal('');
+  productCategories = Object.values(ProductCategory);
+  productCategory = signal<ProductCategory | null>(null);
   submitting = signal(false);
   errorMsg = signal('');
 
   onSubmit(): void {
-    if (!this.productName() || !this.productSerialNumber()) {
+    if (!this.productName() || !this.productCategory()) {
       this.errorMsg.set('Please fill in all required fields.');
       return;
     }
@@ -31,7 +32,7 @@ export class ProductCreateComponent {
 
     const product: Product = {
       productName: this.productName(),
-      productSerialNumber: this.productSerialNumber()
+      productCategory: this.productCategory()
     };
 
     this.productService.create(product).subscribe({

@@ -24,10 +24,12 @@ export class HomeComponent implements OnInit {
 
   filteredProducts = computed(() => {
     const term = this.productSearch().toLowerCase();
-    return this.allProducts().filter(p =>
-      p.productName.toLowerCase().includes(term) ||
-      p.productSerialNumber.toLowerCase().includes(term)
-    );
+    return this.allProducts().filter((p) => {
+      return (
+        p.productName.toLowerCase().includes(term) ||
+        p.productSerialNumber?.toLowerCase().includes(term)
+      );
+    });
   });
 
   pagedProducts = computed(() => {

@@ -3,7 +3,18 @@ import { Warranty } from './warranty.model';
 export interface Product {
   productId?: string;
   productName: string;
-  productSerialNumber: string;
+  productCreatedDate?: string;
+  productSerialNumber?: string;
+  productCategory: ProductCategory | null;
+
   warrantyList?: Warranty[];
 }
 
+export enum ProductCategory {
+  LAPTOP = 'LAPTOP',
+  DESKTOP = 'DESKTOP',
+  SERVER = 'SERVER',
+  ROUTER = 'ROUTER',
+  SWITCH = 'SWITCH',
+  FIREWALL = 'FIREWALL',
+}

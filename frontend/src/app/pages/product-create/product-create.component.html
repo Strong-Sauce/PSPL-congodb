@@ -28,16 +28,19 @@
     </div>
 
     <div class="form-group">
-      <label for="serialNumber">Serial Number *</label>
-      <input
-        id="serialNumber"
-        type="text"
-        placeholder="Enter serial number"
-        [ngModel]="productSerialNumber()"
-        (ngModelChange)="productSerialNumber.set($event)"
-        name="serialNumber"
-        required
-      />
+      <label for="productCategory">Product Category *</label>
+      <select
+        id="productCategory"
+        [ngModel]="productCategory()"
+        (ngModelChange)="productCategory.set($event)"
+        name="productCategory"
+        required>
+        @for (category of productCategories; track category) {
+        <option [value]="category">
+          {{ category }}
+        </option>
+        }
+      </select>
     </div>
 
     <div class="form-actions">

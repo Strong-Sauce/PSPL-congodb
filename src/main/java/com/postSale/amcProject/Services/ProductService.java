@@ -1,13 +1,18 @@
 package com.postSale.amcProject.Services;
 
 import com.postSale.amcProject.Exceptions.ResourceNotFoundException;
+import com.postSale.amcProject.Model.enums.ProductCategory;
 import com.postSale.amcProject.Model.nodes.Product;
+import com.postSale.amcProject.Model.nodes.Warranty;
 import com.postSale.amcProject.Repositories.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class ProductService {
@@ -18,8 +23,27 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
+    // *******************************************
+    // SERVICES
+    // *******************************************
     @Transactional
     public Product createProduct(Product product) {
+
+        validateProduct(product);
+
+        // Set creation date
+        product.setProductCreatedDate(LocalDate.now());
+
+        // Generate unique serial number
+        product.setProductSerialNumber(generateUniqueSerialNumber(product.getProductCategory()));
+
+        // Create initial warranty
+        Warranty warranty = createInitialWarranty(product);
+
+        // Attach warranty to product
+        product.getWarrantyList().add(warranty);
+
+        // Save everything
         return productRepository.save(product);
     }
 
@@ -28,7 +52,6 @@ public class ProductService {
         return productRepository.findAll();
     }
 
-//    @Transactional
     @Transactional(readOnly = true)
     public Optional<Product> getProductById(String id) {
         return productRepository.findById(id);
@@ -36,6 +59,7 @@ public class ProductService {
 
     @Transactional
     public Product updateProd(Product product) {
+        validateProduct(product);
         if (!productRepository.existsById(product.getProductId())) {
             throw new ResourceNotFoundException("Product", product.getProductId());
         }
@@ -44,10 +68,61 @@ public class ProductService {
 
     @Transactional
     public boolean deleteProduct(String id) {
+        validateProduct(productRepository.findById(id).orElse(null));
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product", id);
         }
         productRepository.deleteById(id);
         return true;
+    }
+
+    // *******************************************
+    // METHODS
+    // *******************************************
+    private void validateProduct(Product product) {
+
+        if (product == null) {
+            throw new IllegalArgumentException("Product cannot be null.");
+        }
+
+        if (product.getProductName() == null ||
+                product.getProductName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Product name is required.");
+        }
+
+        if (product.getProductCategory() == null) {
+            throw new IllegalArgumentException("Product category is required.");
+        }
+    }
+
+    private String generateUniqueSerialNumber(ProductCategory category) {
+
+        String serial;
+        do {
+            String random =
+                    UUID.randomUUID()
+                            .toString()
+                            .replace("-", "")
+                            .substring(0, 6)
+                            .toUpperCase();
+
+            serial = category.getSerialPrefix() + "-" + random;
+        } while (productRepository.existsByProductSerialNumber(serial));
+
+        return serial;
+    }
+
+    private Warranty createInitialWarranty(Product product) {
+
+        Warranty warranty = new Warranty();
+        LocalDate startDate = product.getProductCreatedDate();
+        warranty.setWarrantyStartDate(startDate);
+        warranty.setWarrantyEndDate(
+                startDate.plusMonths(
+                        product.getProductCategory().getDefaultWarrantyMonths()
+                )
+        );
+
+        return warranty;
     }
 }

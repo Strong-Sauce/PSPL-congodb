@@ -19,7 +19,7 @@ export class ProductDetailComponent implements OnInit {
   product = signal<Product | null>(null);
   editing = signal(false);
   editName = signal('');
-  editSerial = signal('');
+  // editSerial = signal('');
   loading = signal(true);
 
   ngOnInit(): void {
@@ -29,7 +29,7 @@ export class ProductDetailComponent implements OnInit {
         next: (p) => {
           this.product.set(p);
           this.editName.set(p.productName);
-          this.editSerial.set(p.productSerialNumber);
+          // this.editSerial.set(p.productSerialNumber);
           this.loading.set(false);
         },
         error: () => {
@@ -47,7 +47,7 @@ export class ProductDetailComponent implements OnInit {
     const p = this.product();
     if (p) {
       this.editName.set(p.productName);
-      this.editSerial.set(p.productSerialNumber);
+      // this.editSerial.set(p.productSerialNumber);
     }
     this.editing.set(false);
   }
@@ -59,7 +59,7 @@ export class ProductDetailComponent implements OnInit {
     const updated: Product = {
       ...p,
       productName: this.editName(),
-      productSerialNumber: this.editSerial()
+      // productSerialNumber: this.editSerial()
     };
 
     this.productService.update(updated).subscribe({
