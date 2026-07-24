@@ -65,7 +65,9 @@ public class ProductService {
 
     @Transactional
     public boolean deleteProduct(String id) {
-        validateProduct(productRepository.findById(id).orElse(null));
+        if (id == null || id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Product ID is required.");
+        }
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Product", id);
         }

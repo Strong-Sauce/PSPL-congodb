@@ -20,6 +20,7 @@ export class ProductDetailComponent implements OnInit {
   editing = signal(false);
   editName = signal('');
   // editSerial = signal('');
+  errorMessage = signal('');
   loading = signal(true);
 
   ngOnInit(): void {
@@ -32,8 +33,10 @@ export class ProductDetailComponent implements OnInit {
           // this.editSerial.set(p.productSerialNumber);
           this.loading.set(false);
         },
-        error: () => {
+        error: (err) => {
           this.loading.set(false);
+          console.error('Product not found', err);
+          this.errorMessage = signal(err?.message || 'An error occurred while fetching the product.');
         }
       });
     }
@@ -67,7 +70,10 @@ export class ProductDetailComponent implements OnInit {
         this.product.set(result);
         this.editing.set(false);
       },
-      error: (err) => console.error('Update failed', err)
+      error: (err) => {
+        console.error('Update failed', err);
+        this.errorMessage.set(err?.error?.message || 'Failed to update product. Please try again.');
+      }
     });
   }
 
@@ -78,7 +84,10 @@ export class ProductDetailComponent implements OnInit {
     if (confirm('Are you sure you want to delete this product?')) {
       this.productService.delete(p.productId).subscribe({
         next: () => this.router.navigate(['/']),
-        error: (err) => console.error('Delete failed', err)
+        error: (err) => {
+          console.error('Delete failed', err);
+          this.errorMessage.set(err?.error?.message || 'Failed to delete product. Please try again.');
+        }
       });
     }
   }
