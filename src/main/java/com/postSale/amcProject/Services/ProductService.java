@@ -9,10 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class ProductService {
@@ -41,7 +38,7 @@ public class ProductService {
         Warranty warranty = createInitialWarranty(product);
 
         // Attach warranty to product
-        product.getWarrantyList().add(warranty);
+        product.setWarrantyList(new ArrayList<>(List.of(warranty)));
 
         // Save everything
         return productRepository.save(product);

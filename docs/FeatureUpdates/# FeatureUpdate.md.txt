@@ -1,0 +1,385 @@
+# FeatureUpdate.md
+
+# Product Warranty Foundation
+
+**Status:** ✅ Completed (Core MVP)
+
+---
+
+# Feature Overview
+
+The Product Warranty Foundation establishes a backend-driven workflow for automatic warranty creation. Every product now belongs to a Product Category, which serves as the single source of truth for category-specific business rules such as serial number generation and default warranty duration.
+
+This implementation removes manual warranty creation from the user workflow and ensures that critical business fields are generated and controlled exclusively by the backend.
+
+---
+
+# Objectives
+
+Completed objectives:
+
+- Introduce Product Categories.
+- Automatically generate business-friendly Product Serial Numbers.
+- Automatically create an initial Warranty during Product creation.
+- Centralize category-specific business rules.
+- Prevent clients from manipulating backend-managed fields.
+- Build a scalable foundation for future Warranty renewals and AMC features.
+
+---
+
+# Architecture Decisions
+
+## Product Category as the Source of Truth
+
+Instead of storing warranty information independently, the Product Category now owns category-specific metadata.
+
+Each category contains:
+
+- Display Name
+- Serial Prefix
+- Default Warranty Duration (months)
+
+Example:
+
+| Category | Prefix | Warranty |
+|----------|--------|----------|
+| LAPTOP | LAP | 24 Months |
+| SERVER | SRV | 36 Months |
+| ROUTER | RTR | 12 Months |
+
+This keeps business rules centralized and eliminates duplicated configuration throughout the application.
+
+---
+
+## Product Serial Numbers
+
+The internal Neo4j identifier remains an implementation detail.
+
+Users now interact exclusively with a generated Product Serial Number.
+
+Example:
+
+```
+LAP-7F4A91
+RTR-91AF2C
+SRV-AB9821
+```
+
+Generation strategy:
+
+- Category Prefix
+- Random UUID fragment
+- Retry until unique
+
+Benefits:
+
+- Human-readable
+- Search-friendly
+- Unique
+- Independent of database implementation
+
+---
+
+## Automatic Warranty Creation
+
+Warranty creation is now entirely backend-managed.
+
+Workflow:
+
+```
+Receive Product
+        ↓
+Validate Request
+        ↓
+Assign Creation Date
+        ↓
+Generate Serial Number
+        ↓
+Generate Initial Warranty
+        ↓
+Attach Warranty
+        ↓
+Persist Product
+```
+
+The user never manually creates or associates the initial warranty.
+
+---
+
+# Domain Model
+
+## Product
+
+```
+productId
+productName
+productSerialNumber
+productCategory
+productCreatedDate
+warrantyList
+```
+
+---
+
+## ProductCategory
+
+```
+displayName
+serialPrefix
+defaultWarrantyMonths
+```
+
+---
+
+## Warranty
+
+```
+warrantyId
+warrantyStartDate
+warrantyEndDate
+amcList
+```
+
+---
+
+# Business Rules
+
+Implemented rules:
+
+- Every Product belongs to exactly one Product Category.
+- Product Category determines:
+  - Serial Number Prefix
+  - Default Warranty Duration
+- Product Serial Number is generated automatically.
+- Product Creation Date is generated automatically.
+- Initial Warranty is generated automatically.
+- Warranty is attached automatically during Product creation.
+- Users cannot manually enter Product Serial Numbers.
+- Users cannot manually create the initial Warranty.
+- Backend ignores client-supplied values for backend-managed fields.
+
+---
+
+# Product Creation Flow
+
+```
+User
+    │
+    ▼
+Enter Product Name
+    │
+    ▼
+Select Product Category
+    │
+    ▼
+POST /api/products
+    │
+    ▼
+Backend Validation
+    │
+    ▼
+Set Product Creation Date
+    │
+    ▼
+Generate Unique Product Serial Number
+    │
+    ▼
+Create Initial Warranty
+    │
+    ▼
+Attach Warranty to Product
+    │
+    ▼
+Persist Product + Warranty
+    │
+    ▼
+Return Created Product
+```
+
+---
+
+# Files Added
+
+```
+Model/enums/ProductCategory.java
+```
+
+---
+
+# Files Modified
+
+```
+Model/nodes/Product.java
+
+Repositories/ProductRepository.java
+
+Services/ProductService.java
+
+Angular Product Model
+
+Product Create Component (.ts)
+
+Product Create Component (.html)
+```
+
+---
+
+# Technical Summary
+
+## Backend
+
+- Introduced ProductCategory enum.
+- Added productCategory to Product.
+- Added productCreatedDate.
+- Implemented automatic serial number generation.
+- Implemented automatic warranty generation.
+- Centralized business rules within ProductCategory.
+- Backend now owns all critical generated fields.
+
+---
+
+## Frontend
+
+- Added Product Category dropdown.
+- Removed Product Serial Number input.
+- Updated Product model.
+- Updated Product creation workflow.
+
+---
+
+## Database
+
+New Product properties:
+
+- productCategory
+- productCreatedDate
+- productSerialNumber
+
+Product now automatically owns one initial Warranty.
+
+---
+
+# Benefits
+
+## Domain Driven
+
+Business rules now live in one place instead of being scattered throughout the codebase.
+
+---
+
+## Backend Authoritative
+
+Critical fields are generated server-side, preventing client manipulation.
+
+---
+
+## Scalable
+
+The existing `List<Warranty>` allows future warranty renewals and AMC creation without changing the Product model.
+
+---
+
+## Maintainable
+
+Business logic is centralized inside the Service layer while Controllers remain thin and Repositories focus solely on persistence.
+
+---
+
+# Edge Cases Handled
+
+- Missing Product Name
+- Missing Product Category
+- Null Product request
+- Duplicate Product Serial Number generation retries
+- Client attempting to provide generated fields
+
+---
+
+# Testing Checklist
+
+## Product Creation
+
+- Create Laptop
+- Create Server
+- Create Router
+
+Verify:
+
+- Correct Product Category
+- Generated Serial Number
+- Generated Warranty
+- Correct Warranty Duration
+- Correct Warranty Dates
+
+---
+
+## Validation
+
+- Missing Product Name
+- Missing Product Category
+- Null Request Body
+
+---
+
+## Serial Number
+
+- Prefix matches Product Category
+- No duplicate serial numbers
+- Correct format
+- Uppercase
+
+---
+
+## Warranty
+
+- Created automatically
+- Attached to Product
+- Start Date generated
+- End Date calculated correctly
+
+---
+
+# Technical Debt
+
+None.
+
+The implementation intentionally keeps ProductCategory as an enum for simplicity. If runtime management of categories becomes a business requirement, it can later be migrated to a database-managed entity without affecting the Product-Warranty relationship.
+
+---
+
+# Pending Production Hardening
+
+## High Priority
+
+- Add Neo4j uniqueness constraint on `productSerialNumber`.
+- Add search endpoint using Product Serial Number.
+- Introduce global exception handling using `@ControllerAdvice`.
+
+## Medium Priority
+
+- Separate `purchaseDate` from `productCreatedDate`.
+- Compute Warranty Status (ACTIVE / EXPIRED).
+- Add business decision regarding duplicate Product Names.
+
+---
+
+# Future Enhancements
+
+- Warranty renewal by appending new Warranty nodes.
+- AMC creation after Warranty expiry.
+- Automatic AMC recommendations.
+- Runtime-managed Product Categories (if required).
+- Barcode / QR Code generation using Product Serial Number.
+- Search optimization using Product Serial Number.
+
+---
+
+# Overall Assessment
+
+**Status:** ✅ Complete
+
+The Product Warranty Foundation provides a clean, production-oriented base for the PSPL system.
+
+The implementation follows a domain-driven approach where Product Category is the single source of truth for category-specific business rules. Product creation is now fully backend-controlled, ensuring consistency, data integrity, and maintainability.
+
+This feature establishes the foundation required for future Warranty renewal, AMC lifecycle management, and advanced inventory features while keeping the current implementation simple, scalable, and production-ready.
