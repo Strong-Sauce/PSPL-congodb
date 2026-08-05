@@ -13,8 +13,8 @@
     </button>
     @if (productsOpen()) {
       <div class="section-list">
-        @for (product of products(); track product.productId) {
-          <a [routerLink]="['/products', product.productId]" class="sidebar-item">
+        @for (product of products(); track product.productSerialNumber) {
+          <a [routerLink]="['/products', product.productSerialNumber]" class="sidebar-item">
             <span class="item-dot"></span>
             {{ product.productName }}
           </a>
@@ -39,10 +39,18 @@
     @if (warrantiesOpen()) {
       <div class="section-list">
         @for (warranty of warranties(); track warranty.warrantyId) {
-          <a [routerLink]="['/warranties', warranty.warrantyId]" class="sidebar-item">
-            <span class="item-dot warning"></span>
-            Expires: {{ warranty.warrantyEndDate }}
-          </a>
+          @if (warranty.productSerialNumber) {
+            <a [routerLink]="['/warranties', warranty.warrantyId]" fragment="warranties" class="sidebar-item">
+              <span class="item-dot warning"></span>
+              {{ warranty.productName || 'Product' }} • Expires: {{ warranty.warrantyEndDate }}
+            </a>
+          } @else {
+            <!-- TODO: Add warranty-to-product navigation when productId is unavailable in API payload. -->
+            <span class="sidebar-item">
+              <span class="item-dot warning"></span>
+              {{ warranty.productName || 'Product' }} • Expires: {{ warranty.warrantyEndDate }}
+            </span>
+          }
         } @empty {
           <p class="empty-msg">No expiring warranties</p>
         }
@@ -50,4 +58,3 @@
     }
   </div>
 </aside>
-

@@ -15,10 +15,10 @@ import java.util.List;
 @Setter
 @Node
 public class Product {
-    @Id @GeneratedValue
-    private String productId;
-    private String productName;
+//    @Id @GeneratedValue
+    @Id
     private String productSerialNumber;
+    private String productName;
     private LocalDate productCreatedDate;
     private ProductCategory productCategory;
 

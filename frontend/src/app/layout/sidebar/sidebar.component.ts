@@ -28,14 +28,14 @@ export class SidebarComponent implements OnInit {
   }
 
   loadProducts(): void {
-    this.productService.getAll().subscribe({
+    this.productService.getAllProducts().subscribe({
       next: (data) => this.products.set(data),
       error: (err) => console.error('Failed to load products', err)
     });
   }
 
   loadWarranties(): void {
-    this.warrantyService.getExpiringSoon().subscribe({
+    this.warrantyService.getAllWarranties().subscribe({
       next: (data) => this.warranties.set(data),
       error: (err) => console.error('Failed to load warranties', err)
     });

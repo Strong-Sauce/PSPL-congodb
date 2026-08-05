@@ -19,25 +19,23 @@ export class ProductDetailComponent implements OnInit {
   product = signal<Product | null>(null);
   editing = signal(false);
   editName = signal('');
-  // editSerial = signal('');
   errorMessage = signal('');
   loading = signal(true);
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.productService.getById(id).subscribe({
+    const productSerialNumber = this.route.snapshot.paramMap.get('productSerialNumber');
+    if (productSerialNumber) {
+      this.productService.getProductById(productSerialNumber).subscribe({
         next: (p) => {
           this.product.set(p);
           this.editName.set(p.productName);
-          // this.editSerial.set(p.productSerialNumber);
           this.loading.set(false);
         },
         error: (err) => {
           this.loading.set(false);
           console.error('Product not found', err);
-          this.errorMessage = signal(err?.message || 'An error occurred while fetching the product.');
-        }
+          this.errorMessage.set(err?.message || 'An error occurred while fetching the product.');
+        },
       });
     }
   }
@@ -50,7 +48,6 @@ export class ProductDetailComponent implements OnInit {
     const p = this.product();
     if (p) {
       this.editName.set(p.productName);
-      // this.editSerial.set(p.productSerialNumber);
     }
     this.editing.set(false);
   }
@@ -62,10 +59,9 @@ export class ProductDetailComponent implements OnInit {
     const updated: Product = {
       ...p,
       productName: this.editName(),
-      // productSerialNumber: this.editSerial()
     };
 
-    this.productService.update(updated).subscribe({
+    this.productService.updateProduct(updated).subscribe({
       next: (result) => {
         this.product.set(result);
         this.editing.set(false);
@@ -79,10 +75,10 @@ export class ProductDetailComponent implements OnInit {
 
   deleteProduct(): void {
     const p = this.product();
-    if (!p?.productId) return;
+    if (!p?.productSerialNumber) return;
 
     if (confirm('Are you sure you want to delete this product?')) {
-      this.productService.delete(p.productId).subscribe({
+      this.productService.deleteProduct(p.productSerialNumber).subscribe({
         next: () => this.router.navigate(['/']),
         error: (err) => {
           console.error('Delete failed', err);

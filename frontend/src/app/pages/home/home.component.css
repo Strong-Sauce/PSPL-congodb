@@ -98,7 +98,6 @@
   background: #fff;
   border-radius: 14px;
   padding: 24px;
-  text-decoration: none;
   color: inherit;
   border: 1px solid #f0f0f0;
   transition: all 0.25s;
@@ -164,6 +163,25 @@
   color: #d97706;
 }
 
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-inline {
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #555;
+}
+
+.btn-inline:hover {
+  border-color: #e94560;
+  color: #e94560;
+}
+
 /* Empty State */
 .empty-state {
   grid-column: 1 / -1;
@@ -217,4 +235,3 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
-

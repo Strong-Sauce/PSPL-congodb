@@ -36,7 +36,8 @@
         name="productCategory"
         required>
         @for (category of productCategories; track category) {
-        <option [value]="category">
+        <option [value]="category"
+          class="form-group" >
           {{ category }}
         </option>
         }

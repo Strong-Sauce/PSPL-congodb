@@ -37,19 +37,19 @@ public class ProductController {
         return productService.getAllProducts();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Product> getProduct(@PathVariable String id){
-        return productService.getProductById(id)
+    @GetMapping("/{serialNumber}")
+    public ResponseEntity<Product> getProduct(@PathVariable String serialNumber){
+        return productService.getProduct(serialNumber)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
 
     // DELETE REQS
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Product> deleteProduct(@PathVariable String id) {
-        boolean deletedProoduct = productService.deleteProduct(id);
-        if(!deletedProoduct)
+    @DeleteMapping("/{serialNumber}")
+    public ResponseEntity<Product> deleteProduct(@PathVariable String serialNumber) {
+        boolean deletedProduct = productService.deleteProduct(serialNumber);
+        if(!deletedProduct)
             return ResponseEntity.notFound().build();
         return ResponseEntity.noContent().build();
     }

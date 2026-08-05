@@ -1,7 +1,6 @@
 import { Warranty } from './warranty.model';
 
 export interface Product {
-  productId?: string;
   productName: string;
   productCreatedDate?: string;
   productSerialNumber?: string;

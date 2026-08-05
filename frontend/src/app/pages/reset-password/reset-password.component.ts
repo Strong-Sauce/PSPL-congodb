@@ -15,7 +15,7 @@ export class ResetPasswordComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  // Read the token from URL query param: /reset-password?token=abc123
+  // Read the token from URL query_records param: /reset-password?token=abc123
   token = signal(this.route.snapshot.queryParamMap.get('token') ?? '');
   newPassword = signal('');
   submitting = signal(false);

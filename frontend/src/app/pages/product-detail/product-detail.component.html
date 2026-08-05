@@ -68,8 +68,8 @@
       } @else {
         <div class="detail-props">
           <div class="prop-row">
-            <span class="prop-label">ID</span>
-            <span class="prop-value">{{ p.productId }}</span>
+            <span class="prop-label">Serial Number</span>
+            <span class="prop-value">{{ p.productSerialNumber }}</span>
           </div>
           <div class="prop-row">
             <span class="prop-label">Name</span>
@@ -80,25 +80,23 @@
             <span class="prop-value">{{ p.productCategory }}</span>
           </div>
           <div class="prop-row">
-            <span class="prop-label">Serial Number</span>
-            <span class="prop-value">{{ p.productSerialNumber }}</span>
-          </div>
-          <div class="prop-row">
             <span class="prop-label">Warranties</span>
             <span class="prop-value">{{ p.warrantyList?.length || 0 }}</span>
           </div>
         </div>
 
         @if (p.warrantyList && p.warrantyList.length > 0) {
-          <div class="sub-section">
+          <div id="warranties" class="sub-section">
             <h3>Associated Warranties</h3>
             <div class="sub-grid">
               @for (w of p.warrantyList; track w.warrantyId) {
-                <div class="sub-card">
-                  <p><strong>Start:</strong> {{ w.warrantyStartDate }}</p>
-                  <p><strong>End:</strong> {{ w.warrantyEndDate }}</p>
-                  <p class="sub-badge">{{ w.amcList?.length || 0 }} AMC extensions</p>
-                </div>
+                <a [routerLink]="['/warranties', w.warrantyId]" class="sub-card-link">
+                  <div class="sub-card">
+                    <p><strong>Start:</strong> {{ w.warrantyStartDate }}</p>
+                    <p><strong>End:</strong> {{ w.warrantyEndDate }}</p>
+                    <p class="sub-badge">{{ w.amcList?.length || 0 }} AMC extensions</p>
+                  </div>
+                </a>
               }
             </div>
           </div>
@@ -109,4 +107,3 @@
     <div class="empty-state">Product not found.</div>
   }
 </div>
-

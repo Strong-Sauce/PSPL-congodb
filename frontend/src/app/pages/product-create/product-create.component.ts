@@ -35,9 +35,9 @@ export class ProductCreateComponent {
       productCategory: this.productCategory()
     };
 
-    this.productService.create(product).subscribe({
+    this.productService.createProduct(product).subscribe({
       next: (created) => {
-        this.router.navigate(['/products', created.productId]);
+        this.router.navigate(['/products', created.productSerialNumber]);
       },
       error: (err) => {
         this.submitting.set(false);

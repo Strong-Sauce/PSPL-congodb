@@ -1,0 +1,175 @@
+# BUG-004: Custom Cypher Query Returns Null-Mapped Product Instead of Populated Entity
+
+## Status
+Resolved
+
+## Severity
+High
+
+## Module
+Warranty Service / Spring Data Neo4j Repository
+
+## Environment
+- Spring Boot 4.0.2
+- Spring Data Neo4j 8.0.2
+- Neo4j Desktop
+- Java 25
+
+---
+
+## Problem
+
+The endpoint:
+
+```
+GET /api/warranty/{warrantyId}
+```
+
+returned:
+
+```json
+{
+    "warrantyId": null,
+    "warrantyStartDate": null,
+    "warrantyEndDate": null,
+    "productName": null,
+    "productSerialNumber": null
+}
+```
+
+even though:
+
+- the Warranty node existed,
+- the Product node existed,
+- the HAS_WARRANTY relationship existed,
+- and the Cypher query returned the correct Product node.
+
+---
+
+## Repository Query
+
+```java
+@Query("""
+MATCH (p:Product)-[:HAS_WARRANTY]->(w:Warranty {warrantyId: $warrantyId})
+RETURN p
+""")
+Product findWarrantyById(String warrantyId);
+```
+
+---
+
+## Symptoms
+
+Spring logs produced multiple mapping warnings:
+
+```
+Cannot retrieve a value for property `productSerialNumber`
+Cannot retrieve a value for property `productName`
+Cannot retrieve a value for property `productCreatedDate`
+Cannot retrieve a value for property `productCategory`
+Cannot retrieve a value for property `warrantyList`
+```
+
+along with:
+
+```
+DtoInstantiatingConverter
+```
+
+As a result, every field inside the returned Product object was null.
+
+---
+
+## Root Cause
+
+Although the Cypher query successfully returned the Product node, Spring Data Neo4j treated the result as a DTO projection rather than a fully hydrated Product entity.
+
+Returning only:
+
+```cypher
+RETURN p
+```
+
+did not provide sufficient mapping information for Spring Data Neo4j to populate:
+
+- Product properties
+- Product relationships
+- Warranty collection
+
+Consequently, the service received a Product object whose fields were all null.
+
+---
+
+## Why It Happened
+
+The service layer expected:
+
+```
+Warranty ID
+        ↓
+Repository returns Product
+        ↓
+Product contains populated warrantyList
+        ↓
+Loop warrantyList
+        ↓
+Build DTO
+```
+
+However, the repository actually returned:
+
+```
+Product
+ ├── productName = null
+ ├── productSerialNumber = null
+ ├── warrantyList = null
+```
+
+Therefore the DTO builder produced an object containing only null values.
+
+---
+
+## Resolution
+
+Instead of returning a Product entity and manually traversing relationships, the repository was redesigned to return the required DTO fields directly from Cypher.
+
+Example:
+
+```cypher
+MATCH (p:Product)-[:HAS_WARRANTY]->(w:Warranty)
+WHERE w.warrantyId = $warrantyId
+RETURN
+    w.warrantyId AS warrantyId,
+    w.warrantyStartDate AS warrantyStartDate,
+    w.warrantyEndDate AS warrantyEndDate,
+    p.productName AS productName,
+    p.productSerialNumber AS productSerialNumber
+```
+
+This eliminates unnecessary entity mapping and returns only the fields required by the API.
+
+---
+
+## Impact
+
+- Warranty lookup endpoint returned empty responses.
+- Product entity could not be reliably reconstructed from the custom Cypher query.
+- Additional debugging time spent investigating mapping rather than query execution.
+
+---
+
+## Lessons Learned
+
+1. Custom Cypher queries should return exactly the data required by the API whenever possible.
+2. Returning entire graph entities solely to build DTOs introduces unnecessary mapping complexity.
+3. Spring Data Neo4j may use DTO/projection mapping (`DtoInstantiatingConverter`) for custom queries, causing unexpected null values if the returned data does not match the expected structure.
+4. Repository methods should ideally return DTO projections when the endpoint itself returns a DTO.
+
+---
+
+## Prevention
+
+- Prefer DTO projections for read-only endpoints.
+- Avoid loading entire aggregate roots when only a few fields are required.
+- Verify custom Cypher queries using debug logs before assuming mapping issues.
+- Keep repository return types aligned with API response models.

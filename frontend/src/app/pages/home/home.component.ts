@@ -49,10 +49,14 @@ export class HomeComponent implements OnInit {
 
   filteredWarranties = computed(() => {
     const term = this.warrantySearch().trim().toLowerCase();
-    return this.allWarranties().filter(w =>
-      w.warrantyEndDate.toLowerCase().includes(term) ||
-      w.warrantyStartDate.toLowerCase().includes(term)
-    );
+    return this.allWarranties().filter(w => {
+      return (
+        w.warrantyEndDate.toLowerCase().includes(term) ||
+        w.warrantyStartDate.toLowerCase().includes(term) ||
+        (w.productName.toLowerCase().includes(term)) ||
+        (w.productSerialNumber.toLowerCase().includes(term))
+      );
+    });
   });
 
   pagedWarranties = computed(() => {
@@ -65,11 +69,11 @@ export class HomeComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    this.productService.getAll().subscribe({
+    this.productService.getAllProducts().subscribe({
       next: (data) => this.allProducts.set(data)
     });
-    this.warrantyService.getExpiringSoon().subscribe({
-      next: (data) => this.allWarranties.set(data)
+    this.warrantyService.getAllWarranties().subscribe({
+      next: (data) => this.allWarranties.set(data),
     });
   }
 
@@ -91,4 +95,3 @@ export class HomeComponent implements OnInit {
     this.warrantyPage.set(page);
   }
 }
-

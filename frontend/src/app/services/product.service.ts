@@ -9,24 +9,24 @@ export class ProductService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/products`;
 
-  getAll(): Observable<Product[]> {
+  getAllProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(this.baseUrl);
   }
 
-  getById(id: string): Observable<Product> {
-    return this.http.get<Product>(`${this.baseUrl}/${id}`);
+  getProductById(productSerialNumber: string): Observable<Product> {
+    return this.http.get<Product>(`${this.baseUrl}/${productSerialNumber}`);
   }
 
-  create(product: Product): Observable<Product> {
+  createProduct(product: Product): Observable<Product> {
     return this.http.post<Product>(this.baseUrl, product);
   }
 
-  update(product: Product): Observable<Product> {
+  updateProduct(product: Product): Observable<Product> {
     return this.http.put<Product>(this.baseUrl, product);
   }
 
-  delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  deleteProduct(productSerialNumber: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${productSerialNumber}`);
   }
 }
 

@@ -9,12 +9,12 @@ export class WarrantyService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/warranty`;
 
-  getExpiringSoon(): Observable<Warranty[]> {
+  // Backend payload also includes productId, productName, and productSerialNumber.
+  getAllWarranties(): Observable<Warranty[]> {
     return this.http.get<Warranty[]>(this.baseUrl);
   }
 
-  getByWarrantyId(warrantyId: string): Observable<Warranty[]> {
-    return this.http.get<Warranty[]>(`${this.baseUrl}/${warrantyId}`);
+  getByWarrantyId(warrantyId: string): Observable<Warranty> {
+    return this.http.get<Warranty>(`${this.baseUrl}/${warrantyId}`);
   }
 }
-

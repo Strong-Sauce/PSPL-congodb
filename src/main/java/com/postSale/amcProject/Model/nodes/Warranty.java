@@ -14,7 +14,7 @@ import java.util.List;
 @Setter
 @Node
 public class Warranty {
-    @Id @GeneratedValue
+    @Id
     private String warrantyId;
     private LocalDate warrantyStartDate;
     private LocalDate warrantyEndDate;

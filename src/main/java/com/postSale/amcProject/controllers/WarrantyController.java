@@ -1,5 +1,6 @@
 package com.postSale.amcProject.controllers;
 
+import com.postSale.amcProject.DTO.WarrantyWithProductDTO;
 import com.postSale.amcProject.Model.nodes.Warranty;
 import com.postSale.amcProject.Services.WarrantyService;
 import org.springframework.http.ResponseEntity;
@@ -17,14 +18,22 @@ public class WarrantyController {
         this.warrantyService = warrantyService;
     }
 
-    @GetMapping
+    @Deprecated(forRemoval=true)
+//    @GetMapping
     public ResponseEntity<List<Warranty>> getAllSoonExpiring() {
         return ResponseEntity.ok(warrantyService.getExpiringWarranties());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<List<Warranty>> getSoonExpiringById(@PathVariable String id) {
-        return warrantyService.getExpiringWarrantiesById(id)
+    @GetMapping
+    public ResponseEntity<List<WarrantyWithProductDTO>> getAllWarranties() {
+        return warrantyService.getAllWarranties()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{warrantyId}")
+    public ResponseEntity<WarrantyWithProductDTO> getByWarrantyId(@PathVariable String warrantyId) {
+        return warrantyService.getByWarrantyId(warrantyId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

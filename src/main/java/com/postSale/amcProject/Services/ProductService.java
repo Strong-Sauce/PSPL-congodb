@@ -50,33 +50,33 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Product> getProductById(String id) {
-        return productRepository.findById(id);
+    public Optional<Product> getProduct(String serialNumber) {
+        return productRepository.findByProductSerialNumber(serialNumber);
     }
 
     @Transactional
     public Product updateProd(Product product) {
         validateProduct(product);
-        if (!productRepository.existsById(product.getProductId())) {
-            throw new ResourceNotFoundException("Product", product.getProductId());
+        if (!productRepository.existsById(product.getProductSerialNumber())) {
+            throw new ResourceNotFoundException("Product", product.getProductSerialNumber());
         }
         return productRepository.save(product);
     }
 
     @Transactional
-    public boolean deleteProduct(String id) {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("Product ID is required.");
+    public boolean deleteProduct(String serialNumber) {
+        if (serialNumber == null || serialNumber.trim().isEmpty()) {
+            throw new IllegalArgumentException("Product Serial Number is required.");
         }
-        if (!productRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Product", id);
+        if (!productRepository.existsById(serialNumber)) {
+            throw new ResourceNotFoundException("Product", serialNumber);
         }
-        productRepository.deleteById(id);
+        productRepository.deleteProduct(serialNumber);
         return true;
     }
 
     // *******************************************
-    // METHODS
+    // HELPER METHODS
     // *******************************************
     private void validateProduct(Product product) {
 
@@ -114,6 +114,8 @@ public class ProductService {
     private Warranty createInitialWarranty(Product product) {
 
         Warranty warranty = new Warranty();
+        String warrantyId = "WAR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        warranty.setWarrantyId(warrantyId);
         LocalDate startDate = product.getProductCreatedDate();
         warranty.setWarrantyStartDate(startDate);
         warranty.setWarrantyEndDate(
