@@ -2,7 +2,10 @@
   <!-- ===== PRODUCTS SECTION ===== -->
   <section class="section">
     <div class="section-header">
-      <h2>Your Products</h2>
+      <div class="section-title">
+        <h1>Your Products</h1>
+        <p>Manage and view all your registered products</p>
+      </div>
       <div class="section-actions">
         <div class="search-box">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -43,7 +46,13 @@
   <!--            <a [routerLink]="['/products', product.productId]" class="btn btn-inline">View Product</a>-->
               <!-- TODO: Point this to a dedicated warranty detail route when one exists. -->
               @if ((product.warrantyList) !== undefined && product.warrantyList.length) {
-                <a [routerLink]="['/warranties', product.warrantyList[product.warrantyList.length - 1].warrantyId]" class="btn btn-inline">View Warranty</a>
+                <a [routerLink]="['/warranties', product.warrantyList[product.warrantyList.length - 1].warrantyId]" class="btn btn-card">
+                  <span>View Warranty</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </a>
               }
             </div>
           </div>
@@ -85,8 +94,48 @@
   <!-- ===== WARRANTIES SECTION ===== -->
   <section class="section">
     <div class="section-header">
-      <h2>Expiring Warranties</h2>
+      <div class="section-title">
+        <h1>Warranties</h1>
+        <p>Track and manage all your product warranties</p>
+      </div>
       <div class="section-actions">
+        <div class="filter-group">
+          <button
+            class="btn btn-inline"
+            [class.active]="selectedWarrantyStatus() === 'ALL'"
+            (click)="setWarrantyStatusFilter('ALL')">
+
+            All <span class="filter-count">{{ totalWarrantyCount() }}</span>
+
+          </button>
+
+          <button
+            class="btn badge-active"
+            [class.active]="selectedWarrantyStatus() === 'ACTIVE'"
+            (click)="setWarrantyStatusFilter('ACTIVE')">
+
+            Active <span class="filter-count badge-active">{{ activeWarrantyCount() }}</span>
+
+          </button>
+
+          <button
+            class="btn badge-expiring"
+            [class.active]="selectedWarrantyStatus() === 'EXPIRING_SOON'"
+            (click)="setWarrantyStatusFilter('EXPIRING_SOON')">
+
+            Expiring Soon <span class="filter-count badge-expiring">{{ expiringSoonWarrantyCount() }}</span>
+
+          </button>
+
+          <button
+            class="btn badge-expired"
+            [class.active]="selectedWarrantyStatus() === 'EXPIRED'"
+            (click)="setWarrantyStatusFilter('EXPIRED')">
+
+            Expired <span class="filter-count badge-expired">{{ expiredWarrantyCount() }}</span>
+
+          </button>
+        </div>
         <div class="search-box">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -114,20 +163,29 @@
             <h4 class="card-title">{{ warranty.productName }}</h4>
             <p class="card-subtitle">Product: {{ warranty.productName || 'Unknown product' }}</p>
             <p class="card-subtitle">S/N: {{ warranty.productSerialNumber || 'N/A' }}</p>
-            <div class="card-badge">
-              <p class="card-subtitle">Start: {{ warranty.warrantyStartDate }} | End: {{ warranty.warrantyEndDate }}</p>
-<!--              <p class="card-subtitle">End: {{ warranty.warrantyEndDate }}</p>-->
+            <div class="date-strip">
+<!--              <img src="frontend/public/calender.svg" alt="Calendar" class="date-icon">-->
+              <span>Start: {{ warranty.warrantyStartDate }}</span>
+              <span class="divider"></span>
+              <span>End: {{ warranty.warrantyEndDate }}</span>
+<!--                  <svg calendar></svg>-->
             </div>
-            <div class="card-badge">
-              {{ warranty.warrantyStatus.replace('_', ' ') }}
-            </div>
-            <div class="card-badge warning">
-              {{ warranty.amcList?.length || 0 }} AMC extensions
+            <div style="display: flex; justify-content: space-evenly; align-items: center;">
+              <div class="card-badge">{{ warranty.warrantyStatus.replace('_', ' ') }}</div>
+              <div class="card-badge warning">
+                {{ warranty.amcList?.length || 0 }} AMC extensions
+              </div>
             </div>
             @if (warranty.productSerialNumber) {
-            <div class="card-actions">
-              <a [routerLink]="['/products', warranty.productSerialNumber]" class="btn btn-inline">View Product</a>
-            </div>
+              <div class="card-actions">
+                <a [routerLink]="['/products', warranty.productSerialNumber]" class="btn btn-card">
+                  <span>View Product</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </a>
+              </div>
             } @else {
             <!-- TODO: Cannot navigate warranty-to-product when productId is missing from API payload. -->
             }

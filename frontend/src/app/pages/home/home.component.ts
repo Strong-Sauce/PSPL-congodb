@@ -4,13 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { Product, Warranty } from '../../models';
 import { ProductService } from '../../services/product.service';
 import { WarrantyService } from '../../services/warranty.service';
+import { WarrantyStatus } from '../../models/warranty.model';
 
 @Component({
   selector: 'app-home',
   standalone: true,
   imports: [RouterLink, FormsModule],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.css'
+  styleUrl: './home.component.css',
 })
 export class HomeComponent implements OnInit {
   private readonly productService = inject(ProductService);
@@ -38,26 +39,37 @@ export class HomeComponent implements OnInit {
   });
 
   totalProductPages = computed(() =>
-    Math.ceil(this.filteredProducts().length / this.productPageSize)
+    Math.ceil(this.filteredProducts().length / this.productPageSize),
   );
 
   // Warranties
   allWarranties = signal<Warranty[]>([]);
   warrantySearch = signal('');
+  selectedWarrantyStatus = signal<WarrantyStatus | 'ALL'>('ALL');
   warrantyPage = signal(0);
   readonly warrantyPageSize = 5;
 
   filteredWarranties = computed(() => {
     const term = this.warrantySearch().trim().toLowerCase();
-    return this.allWarranties().filter(w => {
-      return (
-        w.warrantyEndDate.toLowerCase().includes(term) ||
-        w.warrantyStartDate.toLowerCase().includes(term) ||
-        (w.productName.toLowerCase().includes(term)) ||
-        (w.productSerialNumber.toLowerCase().includes(term))
-      );
+    const selectedStatus = this.selectedWarrantyStatus();
+
+    return this.allWarranties().filter((warranty) => {
+      const matchesSearch =
+        warranty.productName.toLowerCase().includes(term) ||
+        warranty.productSerialNumber.toLowerCase().includes(term);
+      const matchesStatus = selectedStatus === 'ALL' || warranty.warrantyStatus === selectedStatus;
+
+      return matchesSearch && matchesStatus;
     });
   });
+
+  activeWarrantyCount = computed(() => this.allWarranties().filter((w) => w.warrantyStatus === 'ACTIVE').length,);
+
+  expiringSoonWarrantyCount = computed(() => this.allWarranties().filter((w) => w.warrantyStatus === 'EXPIRING_SOON').length,);
+
+  expiredWarrantyCount = computed(() => this.allWarranties().filter((w) => w.warrantyStatus === 'EXPIRED').length,);
+
+  totalWarrantyCount = computed(() => this.allWarranties().length);
 
   pagedWarranties = computed(() => {
     const start = this.warrantyPage() * this.warrantyPageSize;
@@ -65,12 +77,12 @@ export class HomeComponent implements OnInit {
   });
 
   totalWarrantyPages = computed(() =>
-    Math.ceil(this.filteredWarranties().length / this.warrantyPageSize)
+    Math.ceil(this.filteredWarranties().length / this.warrantyPageSize),
   );
 
   ngOnInit(): void {
     this.productService.getAllProducts().subscribe({
-      next: (data) => this.allProducts.set(data)
+      next: (data) => this.allProducts.set(data),
     });
     this.warrantyService.getAllWarranties().subscribe({
       next: (data) => this.allWarranties.set(data),
@@ -84,6 +96,11 @@ export class HomeComponent implements OnInit {
 
   onWarrantySearch(term: string): void {
     this.warrantySearch.set(term);
+    this.warrantyPage.set(0);
+  }
+
+  setWarrantyStatusFilter(status: WarrantyStatus | 'ALL'): void {
+    this.selectedWarrantyStatus.set(status);
     this.warrantyPage.set(0);
   }
 
