@@ -834,7 +834,7 @@ The password is stored as a BCrypt hash rather than plaintext in the database.
 ## Login
 
 <!-- SCREENSHOT: Login Page -->
-![Login Page](img.png)
+![Login Page](utils/img.png)
 
 
 ---
@@ -843,7 +843,7 @@ The password is stored as a BCrypt hash rather than plaintext in the database.
 
 <!-- SCREENSHOT: Signup Page -->
 
-![Signup Page](img_1.png)
+![Signup Page](utils/img_1.png)
 
 ---
 
@@ -851,7 +851,7 @@ The password is stored as a BCrypt hash rather than plaintext in the database.
 
 <!-- SCREENSHOT: Home Page -->
 
-![Home Page](img_2.png)
+![Home Page](utils/img_2.png)
 
 ---
 
@@ -859,7 +859,7 @@ The password is stored as a BCrypt hash rather than plaintext in the database.
 
 <!-- SCREENSHOT: Product Details -->
 
-![Product Details](img_3.png)
+![Product Details](utils/img_3.png)
 
 ---
 
@@ -867,7 +867,7 @@ The password is stored as a BCrypt hash rather than plaintext in the database.
 
 <!-- SCREENSHOT: Warranty Details -->
 
-![Warranty Details](img_4.png)
+![Warranty Details](utils/img_4.png)
 
 ---
 
@@ -875,7 +875,7 @@ The password is stored as a BCrypt hash rather than plaintext in the database.
 
 <!-- SCREENSHOT: Purchase Creation -->
 
-![Create Purchase](img_5.png)
+![Create Purchase](utils/img_5.png)
 
 ---
 
