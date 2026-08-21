@@ -127,3 +127,100 @@
   margin: 0;
 }
 
+/* =========================================================
+   SIDEBAR LOADING SKELETON
+   ========================================================= */
+
+.sidebar-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-skeleton-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  min-height: 20px;
+  box-sizing: border-box;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  transform: translateX(-100%);
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.18),
+    transparent
+  );
+
+  animation: sidebar-skeleton-shimmer 1.4s infinite;
+}
+
+
+/* Product / warranty dot */
+
+.skeleton-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+
+/* Product name */
+
+.skeleton-text {
+  display: block;
+  width: 130px;
+  height: 12px;
+}
+
+
+/* Warranty second line */
+
+.skeleton-warranty-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.skeleton-warranty-text .skeleton-text {
+  width: 110px;
+}
+
+.skeleton-subtext {
+  display: block;
+  width: 155px;
+  height: 9px;
+}
+
+
+/* Warranty skeleton dot */
+
+.skeleton-dot.warning {
+  background: rgba(233, 69, 96, 0.35);
+}
+
+
+/* Shimmer animation */
+
+@keyframes sidebar-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

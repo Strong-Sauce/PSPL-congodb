@@ -56,3 +56,24 @@ h1 { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
 .auth-links a { color: #e94560; text-decoration: none; }
 .auth-links a:hover { text-decoration: underline; }
 
+.loading-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

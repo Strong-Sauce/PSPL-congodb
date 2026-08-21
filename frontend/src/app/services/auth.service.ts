@@ -4,10 +4,8 @@ import { Router } from '@angular/router';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 import {
   AuthResponse,
-  ForgotPasswordRequest,
   LoginRequest,
   MessageResponse,
-  ResetPasswordRequest,
   SignupRequest,
 } from '../models/auth.model';
 import { User } from '../models/user.model';
@@ -74,18 +72,6 @@ export class AuthService {
    */
   initSession(): void {
     this.fetchCurrentUser().subscribe();
-  }
-
-  // ─── FORGOT PASSWORD ───────────────────────────────────────────────────────
-
-  forgotPassword(payload: ForgotPasswordRequest): Observable<MessageResponse> {
-    return this.http.post<MessageResponse>(`${this.baseUrl}/forgot-password`, payload);
-  }
-
-  // ─── RESET PASSWORD ────────────────────────────────────────────────────────
-
-  resetPassword(payload: ResetPasswordRequest): Observable<MessageResponse> {
-    return this.http.post<MessageResponse>(`${this.baseUrl}/reset-password`, payload);
   }
 
   // ─── LOGOUT ─────────────────────────────────────────────────────────────────

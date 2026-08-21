@@ -4,6 +4,7 @@ import com.postSale.amcProject.DTO.WarrantyWithProductDTO;
 import com.postSale.amcProject.Model.nodes.Warranty;
 import com.postSale.amcProject.Services.WarrantyService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,15 +26,15 @@ public class WarrantyController {
     }
 
     @GetMapping
-    public ResponseEntity<List<WarrantyWithProductDTO>> getAllWarranties() {
-        return warrantyService.getAllWarranties()
+    public ResponseEntity<List<WarrantyWithProductDTO>> getAllWarranties(Authentication authentication) {
+        return warrantyService.getAllWarranties(authentication)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{warrantyId}")
-    public ResponseEntity<WarrantyWithProductDTO> getByWarrantyId(@PathVariable String warrantyId) {
-        return warrantyService.getByWarrantyId(warrantyId)
+    public ResponseEntity<WarrantyWithProductDTO> getByWarrantyId(@PathVariable String warrantyId, Authentication authentication) {
+        return warrantyService.getByWarrantyId(warrantyId, authentication)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }

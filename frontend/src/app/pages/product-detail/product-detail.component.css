@@ -238,3 +238,163 @@
   margin-top: 4px;
 }
 
+/* ============================================================
+   LOADING / SKELETON STATES
+   ============================================================ */
+
+.loading-card {
+  min-height: 420px;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #eeeeee;
+  border-radius: 8px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+  animation: skeleton-loading 1.4s infinite;
+}
+
+@keyframes skeleton-loading {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-title {
+  width: 180px;
+  height: 28px;
+  margin: 8px 0 0;
+}
+
+.skeleton-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+}
+
+.skeleton-button {
+  width: 72px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.skeleton-label {
+  width: 110px;
+  height: 16px;
+}
+
+.skeleton-value {
+  width: 220px;
+  height: 16px;
+}
+
+.skeleton-section-title {
+  width: 110px;
+  height: 20px;
+  margin-bottom: 16px;
+}
+
+.skeleton-warranty {
+  min-height: 100px;
+}
+
+.skeleton-line {
+  width: 85%;
+  height: 13px;
+  margin-bottom: 12px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+.skeleton-badge {
+  width: 70px;
+  height: 20px;
+  border-radius: 12px;
+}
+
+.button-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: button-spin 0.7s linear infinite;
+}
+
+.btn-secondary .button-spinner {
+  border-color: rgba(85, 85, 85, 0.25);
+  border-top-color: #555;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.form-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(233, 69, 96, 0.08);
+  color: #d33b55;
+  font-size: 0.8rem;
+}
+
+.warranty-empty {
+  padding: 20px;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+
+/* ============================================================
+   DISABLED BUTTONS DURING ASYNC OPERATIONS
+   ============================================================ */
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-group input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+
+/* ============================================================
+   RESPONSIVE SKELETON
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+  .skeleton-value {
+    width: 160px;
+  }
+
+  .skeleton-label {
+    width: 90px;
+  }
+
+  .detail-actions {
+    flex-wrap: wrap;
+  }
+
+}

@@ -2,9 +2,13 @@ package com.postSale.amcProject.Services;
 
 import com.postSale.amcProject.Exceptions.ResourceNotFoundException;
 import com.postSale.amcProject.Model.enums.ProductCategory;
+import com.postSale.amcProject.Model.nodes.Customer;
 import com.postSale.amcProject.Model.nodes.Product;
 import com.postSale.amcProject.Model.nodes.Warranty;
 import com.postSale.amcProject.Repositories.ProductRepository;
+import com.postSale.amcProject.Repositories.SaleRepository;
+import com.postSale.amcProject.Repositories.UserRepository;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,18 +19,39 @@ import java.util.*;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+    private final SaleRepository saleRepository;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(
+            ProductRepository productRepository,
+            UserRepository userRepository,
+            SaleRepository saleRepository
+    ) {
         this.productRepository = productRepository;
+        this.userRepository = userRepository;
+        this.saleRepository = saleRepository;
     }
-
     // *******************************************
     // SERVICES
     // *******************************************
     @Transactional
-    public Product createProduct(Product product) {
+    public Product createProduct(Product product, Authentication authentication) {
 
         validateProduct(product);
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalStateException("Authenticated user is required to create a product.");
+        }
+
+        String email = authentication.getName();
+
+        Customer customer = userRepository.findCustomerByUserEmail(email)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Customer",
+                                "for authenticated user"
+                        )
+                );
 
         // Set creation date
         product.setProductCreatedDate(LocalDate.now());
@@ -40,38 +65,88 @@ public class ProductService {
         // Attach warranty to product
         product.setWarrantyList(new ArrayList<>(List.of(warranty)));
 
-        // Save everything
-        return productRepository.save(product);
+        // Create the Product + Warranty graph
+        productRepository.createProductWithWarranty(
+                product.getProductSerialNumber(),
+                product.getProductName(),
+                product.getProductCreatedDate(),
+                product.getProductCategory().name(),
+                warranty.getWarrantyId(),
+                warranty.getWarrantyStartDate(),
+                warranty.getWarrantyEndDate()
+        );
+
+        // Create the Sale representing this product purchase
+        String saleId = UUID.randomUUID().toString();
+
+        saleRepository.createSale(saleId, product.getProductCreatedDate());
+
+        // Connect Customer -> Sale
+        saleRepository.linkCustomer(customer.getCustId(), saleId);
+
+        // Connect Sale -> Product
+        saleRepository.linkProduct(saleId, product.getProductSerialNumber());
+
+        return product;
     }
 
     @Transactional(readOnly = true)
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public List<Product> getAllProducts(Authentication authentication) {
+        String customerId = getCustomerId(authentication);
+        System.out.println("PRODUCT ACCESS -> email=" + authentication.getName() + ", customerId=" + customerId);
+
+        return productRepository.findAllProductsByCustomerId(customerId);
     }
 
     @Transactional(readOnly = true)
-    public Optional<Product> getProduct(String serialNumber) {
-        return productRepository.findByProductSerialNumber(serialNumber);
+    public Optional<Product> getProduct(String serialNumber, Authentication authentication) {
+        String customerId = getCustomerId(authentication);
+
+        return productRepository.findProductByCustomerId(customerId, serialNumber)
+                .map(product -> {List<Warranty> warranties = productRepository.findWarrantiesByProductSerialNumber(serialNumber);
+            product.setWarrantyList(warranties);
+            return product;
+        });
     }
 
     @Transactional
-    public Product updateProd(Product product) {
+    public Product updateProduct( Product product, Authentication authentication ) {
+
         validateProduct(product);
-        if (!productRepository.existsById(product.getProductSerialNumber())) {
-            throw new ResourceNotFoundException("Product", product.getProductSerialNumber());
+
+        String customerId = getCustomerId(authentication);
+
+        if (!productRepository.existsProductByCustomerId( customerId, product.getProductSerialNumber() )) {
+            throw new ResourceNotFoundException( "Product", product.getProductSerialNumber() );
         }
-        return productRepository.save(product);
+
+        productRepository.updateProduct(
+                customerId,
+                product.getProductSerialNumber(),
+                product.getProductName(),
+                product.getProductCreatedDate(),
+                product.getProductCategory().name()
+        );
+        return product;
     }
 
     @Transactional
-    public boolean deleteProduct(String serialNumber) {
+    public boolean deleteProduct( String serialNumber, Authentication authentication ) {
+
         if (serialNumber == null || serialNumber.trim().isEmpty()) {
-            throw new IllegalArgumentException("Product Serial Number is required.");
+            throw new IllegalArgumentException( "Product Serial Number is required." );
         }
-        if (!productRepository.existsById(serialNumber)) {
-            throw new ResourceNotFoundException("Product", serialNumber);
+
+        String customerId = getCustomerId(authentication);
+
+        if (!productRepository.existsProductByCustomerId( customerId, serialNumber )) {
+            throw new ResourceNotFoundException( "Product", serialNumber );
         }
-        productRepository.deleteProduct(serialNumber);
+
+        productRepository.deleteLinkedAMCs(serialNumber);
+        productRepository.deleteLinkedWarranties(serialNumber);
+        productRepository.deleteProductNode(serialNumber);
+
         return true;
     }
 
@@ -125,5 +200,15 @@ public class ProductService {
         );
 
         return warranty;
+    }
+
+    private String getCustomerId(Authentication authentication) {
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalArgumentException( "User must be authenticated." );
+        }
+
+        return userRepository.findCustomerIdByEmail(authentication.getName())
+                .orElseThrow(() -> new ResourceNotFoundException( "Customer", authentication.getName()));
     }
 }

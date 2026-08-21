@@ -1,60 +1,224 @@
 <aside class="sidebar" [class.collapsed]="collapsed()">
+
   <!-- Products Dropdown -->
   <div class="sidebar-section">
+
     <button class="section-header" (click)="toggleProducts()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <rect x="2" y="3" width="20" height="18" rx="2"/>
         <path d="M8 7h8M8 11h8M8 15h4"/>
       </svg>
+
       <span class="section-title">Your Products</span>
-      <svg class="chevron" [class.open]="productsOpen()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <svg
+        class="chevron"
+        [class.open]="productsOpen()"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <polyline points="6 9 12 15 18 9"/>
       </svg>
+
     </button>
+
+
     @if (productsOpen()) {
-      <div class="section-list">
-        @for (product of products(); track product.productSerialNumber) {
-          <a [routerLink]="['/products', product.productSerialNumber]" class="sidebar-item">
-            <span class="item-dot"></span>
-            {{ product.productName }}
-          </a>
-        } @empty {
-          <p class="empty-msg">No products found</p>
+
+    <div class="section-list">
+
+      <!-- Product Loading Skeleton -->
+      @if (productsLoading()) {
+
+      <div class="sidebar-skeleton-list">
+
+        @for (item of [1, 2, 3, 4, 5]; track item) {
+
+        <div class="sidebar-skeleton-item">
+
+          <span class="skeleton skeleton-dot"></span>
+
+          <span class="skeleton skeleton-text"></span>
+
+        </div>
+
         }
+
       </div>
+
+      }
+
+      <!-- Products -->
+      @else {
+
+      @for (
+      product of products();
+      track product.productSerialNumber
+      ) {
+
+      <a
+        [routerLink]="[
+                '/products',
+                product.productSerialNumber
+              ]"
+        class="sidebar-item"
+      >
+
+        <span class="item-dot"></span>
+
+        {{ product.productName }}
+
+      </a>
+
+      } @empty {
+
+      <p class="empty-msg">
+        No products found
+      </p>
+
+      }
+
+      }
+
+    </div>
+
     }
+
   </div>
+
 
   <!-- Warranties Dropdown -->
   <div class="sidebar-section">
+
     <button class="section-header" (click)="toggleWarranties()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
-      <span class="section-title">Expiring Warranties</span>
-      <svg class="chevron" [class.open]="warrantiesOpen()" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+      <span class="section-title">
+        Expiring Warranties
+      </span>
+
+      <svg
+        class="chevron"
+        [class.open]="warrantiesOpen()"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <polyline points="6 9 12 15 18 9"/>
       </svg>
+
     </button>
+
+
     @if (warrantiesOpen()) {
-      <div class="section-list">
-        @for (warranty of warranties(); track warranty.warrantyId) {
-          @if (warranty.productSerialNumber) {
-            <a [routerLink]="['/warranties', warranty.warrantyId]" fragment="warranties" class="sidebar-item">
-              <span class="item-dot warning"></span>
-              {{ warranty.productName || 'Product' }} • Expires: {{ warranty.warrantyEndDate }}
-            </a>
-          } @else {
-            <!-- TODO: Add warranty-to-product navigation when productId is unavailable in API payload. -->
-            <span class="sidebar-item">
-              <span class="item-dot warning"></span>
-              {{ warranty.productName || 'Product' }} • Expires: {{ warranty.warrantyEndDate }}
-            </span>
-          }
-        } @empty {
-          <p class="empty-msg">No expiring warranties</p>
+
+    <div class="section-list">
+
+      <!-- Warranty Loading Skeleton -->
+      @if (warrantiesLoading()) {
+
+      <div class="sidebar-skeleton-list">
+
+        @for (item of [1, 2, 3, 4]; track item) {
+
+        <div class="sidebar-skeleton-item warranty-skeleton">
+
+          <span class="skeleton skeleton-dot warning"></span>
+
+          <div class="skeleton-warranty-text">
+
+            <span class="skeleton skeleton-text"></span>
+
+            <span class="skeleton skeleton-subtext"></span>
+
+          </div>
+
+        </div>
+
         }
+
       </div>
+
+      }
+
+      <!-- Warranties -->
+      @else {
+
+      @for (
+      warranty of warranties();
+      track warranty.warrantyId
+      ) {
+
+      @if (warranty.productSerialNumber) {
+
+      <a
+        [routerLink]="[
+                  '/warranties',
+                  warranty.warrantyId
+                ]"
+        fragment="warranties"
+        class="sidebar-item"
+      >
+
+        <span class="item-dot warning"></span>
+
+        {{ warranty.productName || 'Product' }}
+        • Expires: {{ warranty.warrantyEndDate }}
+
+      </a>
+
+      } @else {
+
+      <span class="sidebar-item">
+
+                <span class="item-dot warning"></span>
+
+                {{ warranty.productName || 'Product' }}
+                • Expires: {{ warranty.warrantyEndDate }}
+
+              </span>
+
+      }
+
+      } @empty {
+
+      <p class="empty-msg">
+        No expiring warranties
+      </p>
+
+      }
+
+      }
+
+    </div>
+
     }
+
   </div>
+
 </aside>

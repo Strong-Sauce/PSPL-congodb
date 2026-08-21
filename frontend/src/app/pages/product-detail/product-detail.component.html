@@ -1,109 +1,304 @@
 <div class="page-container">
+
+  <!-- Header -->
   <div class="page-header">
     <a routerLink="/" class="back-link">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      Back
+      ← Back to Products
     </a>
+
+    @if (loading()) {
+    <div class="skeleton skeleton-title"></div>
+    } @else if (product()) {
     <h1>Product Details</h1>
+    }
   </div>
 
+
+  <!-- ========================= -->
+  <!-- PRODUCT LOADING SKELETON -->
+  <!-- ========================= -->
+
   @if (loading()) {
-    <div class="loading-state">Loading...</div>
-  } @else if (product(); as p) {
-    <div class="detail-card">
-      <div class="detail-top">
-        <div class="detail-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="2" y="3" width="20" height="18" rx="2"/>
-            <path d="M8 7h8M8 11h8M8 15h4"/>
-          </svg>
+
+  <div class="detail-card loading-card">
+
+    <div class="detail-top">
+      <div class="skeleton skeleton-icon"></div>
+
+      <div class="detail-actions">
+        <div class="skeleton skeleton-button"></div>
+        <div class="skeleton skeleton-button"></div>
+      </div>
+    </div>
+
+    <div class="detail-props">
+
+      <div class="prop-row">
+        <div class="skeleton skeleton-label"></div>
+        <div class="skeleton skeleton-value"></div>
+      </div>
+
+      <div class="prop-row">
+        <div class="skeleton skeleton-label"></div>
+        <div class="skeleton skeleton-value"></div>
+      </div>
+
+      <div class="prop-row">
+        <div class="skeleton skeleton-label"></div>
+        <div class="skeleton skeleton-value"></div>
+      </div>
+
+      <div class="prop-row">
+        <div class="skeleton skeleton-label"></div>
+        <div class="skeleton skeleton-value"></div>
+      </div>
+
+    </div>
+
+    <!-- Warranty skeleton -->
+    <div class="sub-section">
+      <div class="skeleton skeleton-section-title"></div>
+
+      <div class="sub-grid">
+
+        <div class="sub-card skeleton-warranty">
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line short"></div>
+          <div class="skeleton skeleton-badge"></div>
         </div>
-        <div class="detail-actions">
-          @if (!editing()) {
-            <button class="btn btn-secondary" (click)="startEdit()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Update
-            </button>
-            <button class="btn btn-danger" (click)="deleteProduct()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-              Delete
-            </button>
+
+        <div class="sub-card skeleton-warranty">
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line short"></div>
+          <div class="skeleton skeleton-badge"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ========================= -->
+  <!-- ERROR STATE -->
+  <!-- ========================= -->
+
+  } @else if (errorMessage() && !product()) {
+
+  <div class="empty-state error-state">
+    <p>{{ errorMessage() }}</p>
+    <a routerLink="/" class="btn btn-secondary">
+      Back to Products
+    </a>
+  </div>
+
+
+  <!-- ========================= -->
+  <!-- PRODUCT CONTENT -->
+  <!-- ========================= -->
+
+  } @else if (product(); as p) {
+
+  <div class="detail-card">
+
+    <div class="detail-top">
+
+      <div class="detail-icon">
+        <!-- Keep your existing product icon here -->
+        📦
+      </div>
+
+      <div class="detail-actions">
+
+        @if (!editing()) {
+
+        <button
+          class="btn btn-secondary"
+          type="button"
+          (click)="startEdit()"
+          [disabled]="deleting()"
+        >
+          Edit
+        </button>
+
+        <button
+          class="btn btn-danger"
+          type="button"
+          (click)="deleteProduct()"
+          [disabled]="deleting() || saving()"
+        >
+          @if (deleting()) {
+          <span class="button-spinner"></span>
+          Deleting...
+          } @else {
+          Delete
           }
+        </button>
+
+        }
+
+      </div>
+
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- EDIT MODE -->
+    <!-- ========================= -->
+
+    @if (editing()) {
+
+    <div class="edit-form">
+
+      <div class="form-group">
+        <label for="productName">
+          Product Name
+        </label>
+
+        <input
+          id="productName"
+          type="text"
+          [(ngModel)]="editName"
+          [disabled]="saving()"
+        />
+      </div>
+
+      @if (errorMessage()) {
+      <div class="form-error">
+        {{ errorMessage() }}
+      </div>
+      }
+
+      <div class="form-actions">
+
+        <button
+          class="btn btn-secondary"
+          type="button"
+          (click)="cancelEdit()"
+          [disabled]="saving()"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="saveEdit()"
+          [disabled]="saving() || !editName().trim()"
+        >
+          @if (saving()) {
+          <span class="button-spinner"></span>
+          Saving...
+          } @else {
+          Save Changes
+          }
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- VIEW MODE -->
+    <!-- ========================= -->
+
+    } @else {
+
+    @if (errorMessage()) {
+    <div class="form-error">
+      {{ errorMessage() }}
+    </div>
+    }
+
+    <div class="detail-props">
+
+      <div class="prop-row">
+        <div class="prop-label">
+          Product Name
+        </div>
+
+        <div class="prop-value">
+          {{ p.productName }}
         </div>
       </div>
 
-      @if (editing()) {
-        <div class="edit-form">
-          <div class="form-group">
-            <label>Product Name</label>
-            <input
-              type="text"
-              [ngModel]="editName()"
-              (ngModelChange)="editName.set($event)"
-              name="editName"
-            />
-          </div>
-<!--          <div class="form-group">-->
-<!--            <label>Serial Number</label>-->
-<!--            <input-->
-<!--              type="text"-->
-<!--              [ngModel]="editSerial()"-->
-<!--              (ngModelChange)="editSerial.set($event)"-->
-<!--              name="editSerial"-->
-<!--            />-->
-<!--          </div>-->
-          <div class="form-actions">
-            <button class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
-            <button class="btn btn-primary" (click)="saveEdit()">Save Changes</button>
-          </div>
-        </div>
-      } @else {
-        <div class="detail-props">
-          <div class="prop-row">
-            <span class="prop-label">Serial Number</span>
-            <span class="prop-value">{{ p.productSerialNumber }}</span>
-          </div>
-          <div class="prop-row">
-            <span class="prop-label">Name</span>
-            <span class="prop-value">{{ p.productName }}</span>
-          </div>
-          <div class="prop-row">
-            <span class="prop-label">Product Category</span>
-            <span class="prop-value">{{ p.productCategory }}</span>
-          </div>
-          <div class="prop-row">
-            <span class="prop-label">Warranties</span>
-            <span class="prop-value">{{ p.warrantyList?.length || 0 }}</span>
-          </div>
+      <div class="prop-row">
+        <div class="prop-label">
+          Serial Number
         </div>
 
-        @if (p.warrantyList && p.warrantyList.length > 0) {
-          <div id="warranties" class="sub-section">
-            <h3>Associated Warranties</h3>
-            <div class="sub-grid">
-              @for (w of p.warrantyList; track w.warrantyId) {
-                <a [routerLink]="['/warranties', w.warrantyId]" class="sub-card-link">
-                  <div class="sub-card">
-                    <p><strong>Start:</strong> {{ w.warrantyStartDate }}</p>
-                    <p><strong>End:</strong> {{ w.warrantyEndDate }}</p>
-                    <p class="sub-badge">{{ w.amcList?.length || 0 }} AMC extensions</p>
-                  </div>
-                </a>
-              }
-            </div>
-          </div>
-        }
-      }
+        <div class="prop-value">
+          {{ p.productSerialNumber }}
+        </div>
+      </div>
+
+      <div class="prop-row">
+        <div class="prop-label">
+          Category
+        </div>
+
+        <div class="prop-value">
+          {{ p.productCategory }}
+        </div>
+      </div>
+
+      <div class="prop-row">
+        <div class="prop-label">
+          Created Date
+        </div>
+
+        <div class="prop-value">
+          {{ p.productCreatedDate }}
+        </div>
+      </div>
+
     </div>
-  } @else {
-    <div class="empty-state">Product not found.</div>
+
+
+    <!-- ========================= -->
+    <!-- WARRANTIES -->
+    <!-- ========================= -->
+
+    <div class="sub-section">
+
+      <h3>Warranties</h3>
+
+      @if (p.warrantyList && p.warrantyList.length > 0) {
+
+      <div class="sub-grid">
+
+        @for (warranty of p.warrantyList; track warranty.warrantyId) {
+
+          <a [routerLink]="['/warranties', warranty.warrantyId]" class="sub-card-link">
+            <div class="sub-card">
+              <p><strong>Warranty ID: </strong>{{ warranty.warrantyId }}</p>
+              <p><strong>Start: </strong> {{ warranty.warrantyStartDate }}</p>
+              <p><strong>End: </strong> {{ warranty.warrantyEndDate }}</p>
+              <div class="sub-card-badge">
+                {{ warranty.warrantyStatus }}
+              </div>
+            </div>
+          </a>
+
+        }
+
+      </div>
+
+      } @else {
+
+      <div class="empty-state warranty-empty">
+        No warranties found for this product.
+      </div>
+
+      }
+
+    </div>
+
+    }
+
+  </div>
+
   }
+
 </div>

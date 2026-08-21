@@ -18,17 +18,31 @@
             (ngModelChange)="onProductSearch($event)"
           />
         </div>
-        <a routerLink="/products/new" class="btn btn-primary">
+        <a routerLink="/purchases/new" class="btn btn-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          Add Product
+          Add Purchase
         </a>
       </div>
     </div>
 
-    <div class="card-grid">
-      @for (product of pagedProducts(); track product.productSerialNumber) {
+    @if (productLoading()) {
+      <div class="card-grid">
+        @for (item of [1, 2, 3, 4]; track item) {
+        <div class="card skeleton-card" aria-hidden="true">
+          <div class="skeleton skeleton-icon"></div>
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-subtitle"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-button"></div>
+        </div>
+        }
+      </div>
+    } @else {
+      <div class="card-grid">
+        @for (product of pagedProducts(); track product.productSerialNumber) {
         <a [routerLink]="['/products', product.productSerialNumber]">
           <div class="card">
             <div class="card-icon">
@@ -43,21 +57,21 @@
               {{ product.warrantyList?.length || 0 }} warranties
             </div>
             <div class="card-actions">
-  <!--            <a [routerLink]="['/products', product.productId]" class="btn btn-inline">View Product</a>-->
+              <!--            <a [routerLink]="['/products', product.productId]" class="btn btn-inline">View Product</a>-->
               <!-- TODO: Point this to a dedicated warranty detail route when one exists. -->
               @if ((product.warrantyList) !== undefined && product.warrantyList.length) {
-                <a [routerLink]="['/warranties', product.warrantyList[product.warrantyList.length - 1].warrantyId]" class="btn btn-card">
-                  <span>View Warranty</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                    <polyline points="12 5 19 12 12 19"/>
-                  </svg>
-                </a>
+              <a [routerLink]="['/warranties', product.warrantyList[product.warrantyList.length - 1].warrantyId]" class="btn btn-card">
+                <span>View Warranty</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </a>
               }
             </div>
           </div>
         </a>
-      } @empty {
+        } @empty {
         <div class="empty-state">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
             <rect x="2" y="3" width="20" height="18" rx="2"/>
@@ -65,8 +79,9 @@
           </svg>
           <p>No products found</p>
         </div>
-      }
-    </div>
+        }
+      </div>
+    }
 
     @if (totalProductPages() > 1) {
       <div class="pagination">
@@ -150,8 +165,24 @@
       </div>
     </div>
 
+    @if (warrantyLoading()) {
+
     <div class="card-grid">
-      @for (warranty of pagedWarranties(); track warranty.warrantyId) {
+      @for (item of [1, 2, 3, 4]; track item) {
+      <div class="card card-warning skeleton-card" aria-hidden="true">
+        <div class="skeleton skeleton-icon"></div>
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-title short"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+        <div class="skeleton skeleton-subtitle short"></div>
+        <div class="skeleton skeleton-date"></div>
+        <div class="skeleton skeleton-button"></div>
+      </div>
+      }
+    </div>
+    } @else {
+      <div class="card-grid">
+        @for (warranty of pagedWarranties(); track warranty.warrantyId) {
         <a [routerLink]="['/warranties', warranty.warrantyId]">
           <div class="card card-warning">
             <div class="card-icon warning">
@@ -164,11 +195,11 @@
             <p class="card-subtitle">Product: {{ warranty.productName || 'Unknown product' }}</p>
             <p class="card-subtitle">S/N: {{ warranty.productSerialNumber || 'N/A' }}</p>
             <div class="date-strip">
-<!--              <img src="frontend/public/calender.svg" alt="Calendar" class="date-icon">-->
+              <!--              <img src="frontend/public/calender.svg" alt="Calendar" class="date-icon">-->
               <span>Start: {{ warranty.warrantyStartDate }}</span>
               <span class="divider"></span>
               <span>End: {{ warranty.warrantyEndDate }}</span>
-<!--                  <svg calendar></svg>-->
+              <!--                  <svg calendar></svg>-->
             </div>
             <div style="display: flex; justify-content: space-evenly; align-items: center;">
               <div class="card-badge">{{ warranty.warrantyStatus.replace('_', ' ') }}</div>
@@ -177,29 +208,32 @@
               </div>
             </div>
             @if (warranty.productSerialNumber) {
-              <div class="card-actions">
-                <a [routerLink]="['/products', warranty.productSerialNumber]" class="btn btn-card">
-                  <span>View Product</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                    <polyline points="12 5 19 12 12 19"/>
-                  </svg>
-                </a>
-              </div>
+            <div class="card-actions">
+              <a [routerLink]="['/products', warranty.productSerialNumber]" class="btn btn-card">
+                <span>View Product</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </a>
+            </div>
             } @else {
             <!-- TODO: Cannot navigate warranty-to-product when productId is missing from API payload. -->
             }
           </div>
         </a>
-      } @empty {
+        } @empty {
         <div class="empty-state">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
           <p>No expiring warranties</p>
         </div>
-      }
-    </div>
+        }
+      </div>
+
+    }
+
 
     @if (totalWarrantyPages() > 1) {
       <div class="pagination">

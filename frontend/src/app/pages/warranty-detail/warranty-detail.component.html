@@ -1,73 +1,199 @@
 <div class="page-container">
+
   <div class="page-header">
     <a routerLink="/" class="back-link">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <polyline points="15 18 9 12 15 6"/>
       </svg>
       Back
     </a>
-    <h1>Warrenty Details</h1>
+
+    <h1>Warranty Details</h1>
   </div>
 
+
+  <!-- ========================= -->
+  <!-- LOADING SKELETON -->
+  <!-- ========================= -->
+
   @if (loading()) {
-  <div class="loading-state">Loading...</div>
-  } @else if (warranty(); as w) {
-  <div class="detail-card">
+
+  <div class="detail-card skeleton-card">
+
+    <!-- Top section -->
     <div class="detail-top">
+
+      <div class="skeleton skeleton-icon"></div>
+
+    </div>
+
+
+    <!-- Property rows -->
+    <div class="detail-props">
+
+      <div class="prop-row">
+          <span class="prop-label">
+            <span class="skeleton skeleton-label"></span>
+          </span>
+
+        <span class="prop-value">
+            <span class="skeleton skeleton-value short"></span>
+          </span>
+      </div>
+
+
+      <div class="prop-row">
+          <span class="prop-label">
+            <span class="skeleton skeleton-label"></span>
+          </span>
+
+        <span class="prop-value">
+            <span class="skeleton skeleton-value medium"></span>
+          </span>
+      </div>
+
+
+      <div class="prop-row">
+          <span class="prop-label">
+            <span class="skeleton skeleton-label"></span>
+          </span>
+
+        <span class="prop-value">
+            <span class="skeleton skeleton-value long"></span>
+          </span>
+      </div>
+
+
+      <div class="prop-row">
+          <span class="prop-label">
+            <span class="skeleton skeleton-label"></span>
+          </span>
+
+        <span class="prop-value">
+            <span class="skeleton skeleton-value medium"></span>
+          </span>
+      </div>
+
+
+      <div class="prop-row">
+          <span class="prop-label">
+            <span class="skeleton skeleton-label"></span>
+          </span>
+
+        <span class="prop-value">
+            <span class="skeleton skeleton-value medium"></span>
+          </span>
+      </div>
+
+    </div>
+
+
+    <!-- Button skeleton -->
+    <div class="skeleton skeleton-button"></div>
+
+  </div>
+
+
+  <!-- ========================= -->
+  <!-- ACTUAL WARRANTY -->
+  <!-- ========================= -->
+
+  } @else if (warranty(); as w) {
+
+  <div class="detail-card">
+
+    <div class="detail-top">
+
       <div class="detail-icon card-icon warning">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
       </div>
-<!--      <div class="detail-actions">-->
-<!--        <button class="btn btn-secondary" (click)="upgrade()">-->
-<!--          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">-->
-<!--            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>-->
-<!--            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>-->
-<!--          </svg>-->
-<!--          Upgrade-->
-<!--        </button>-->
-<!--        <button class="btn btn-danger" (click)="extendWarranty()">-->
-<!--          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">-->
-<!--            <polyline points="3 6 5 6 21 6"/>-->
-<!--            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>-->
-<!--          </svg>-->
-<!--          Extend-->
-<!--        </button>-->
-<!--      </div>-->
+
     </div>
 
+
     <div class="detail-props">
+
       <div class="prop-row">
         <span class="prop-label">ID</span>
         <span class="prop-value">{{ w.warrantyId }}</span>
       </div>
+
       <div class="prop-row">
         <span class="prop-label">Product Name</span>
         <span class="prop-value">{{ w.productName }}</span>
       </div>
+
       <div class="prop-row">
         <span class="prop-label">Product Serial Number</span>
-        <span class="prop-value">{{ w.productSerialNumber }}</span>
+        <span class="prop-value">
+            {{ w.productSerialNumber }}
+          </span>
       </div>
+
       <div class="prop-row">
         <span class="prop-label">Start Date</span>
-        <span class="prop-value">{{ w.warrantyStartDate }}</span>
+        <span class="prop-value">
+            {{ w.warrantyStartDate }}
+          </span>
       </div>
+
       <div class="prop-row">
         <span class="prop-label">End Date</span>
-        <span class="prop-value">{{ w.warrantyEndDate }}</span>
+        <span class="prop-value">
+            {{ w.warrantyEndDate }}
+          </span>
       </div>
+
     </div>
 
-    <a [routerLink]="['/products', w.productSerialNumber]" class="btn btn-inline">
-      <svg width="18" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+    <a
+      [routerLink]="['/products', w.productSerialNumber]"
+      class="btn btn-inline"
+    >
+      <svg
+        width="18"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
         <polyline points="15 18 9 12 15 6"/>
       </svg>
+
       <strong>View Product</strong>
     </a>
+
   </div>
+
+
+  <!-- ========================= -->
+  <!-- EMPTY / ERROR -->
+  <!-- ========================= -->
+
   } @else {
-  <div class="empty-state">Warranty not found.</div>
+
+  <div class="empty-state">
+    {{ errorMessage() || 'Warranty not found.' }}
+  </div>
+
   }
+
 </div>

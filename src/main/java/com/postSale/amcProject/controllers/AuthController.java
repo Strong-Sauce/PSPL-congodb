@@ -60,26 +60,6 @@ public class AuthController {
     }
 
     /**
-     * POST /api/auth/forgot-password
-     * Send a password reset email (or log URL if mail is not configured).
-     */
-    @PostMapping("/forgot-password")
-    public ResponseEntity<MessageResponse> forgotPassword(
-            @Valid @RequestBody ForgotPasswordRequest request) {
-        return ResponseEntity.ok(authService.forgotPassword(request));
-    }
-
-    /**
-     * POST /api/auth/reset-password
-     * Reset the password using a valid, non-expired token.
-     */
-    @PostMapping("/reset-password")
-    public ResponseEntity<MessageResponse> resetPassword(
-            @Valid @RequestBody ResetPasswordRequest request) {
-        return ResponseEntity.ok(authService.resetPassword(request));
-    }
-
-    /**
      * POST /api/auth/logout
      * Destroy the session and log the user out.
      */

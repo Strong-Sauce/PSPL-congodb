@@ -1,402 +1,981 @@
 # 🚀 PSPL — Post-Sale Product Lifecycle & AMC Management System
 
-> A full-stack web application for tracking **products**, **sales**, **warranties**, and **Annual Maintenance Contracts (AMCs)** across their entire lifecycle — powered by a Neo4j graph database.
+> A full-stack application for managing the **post-sale lifecycle of products** — from customer purchase and product registration through warranty coverage and successive Annual Maintenance Contracts (AMCs).
+>
+> Built with **Spring Boot, Angular, and CognoDB (Neo4j-compatible graph database)**.
 
 ---
 
-## 📖 Table of Contents
+## 📌 Table of Contents
 
-- [Introduction](#-introduction)
-- [Tech Stack](#-tech-stack)
-- [System Architecture](#-system-architecture)
-- [Database Schema](#-database-schema)
-- [Project Structure](#-project-structure)
-- [REST API Endpoints](#-rest-api-endpoints)
-- [Setup Instructions](#-setup-instructions)
-- [Running the Application](#-running-the-application)
-- [FAQ](#-faq)
-
----
-
-## 🧩 Introduction
-
-**What problem does this solve?**
-
-When a company sells products, the story doesn't end at the cash register. There's a whole *post-sale lifecycle* to manage:
-
-1. **Who** bought the product? → `Customer`
-2. **When** was it sold? → `Sale`
-3. **What** was sold? → `Product`
-4. **How long** is it covered? → `Warranty`
-5. **What happens** when the warranty expires? → `AMC` (Annual Maintenance Contract)
-6. **What plan** does the AMC follow? → `AMCOffer` (Silver, Gold, etc.)
-
-These entities are deeply **interconnected** — a customer purchases a sale, which contains products, which have warranties, which can be extended by AMCs based on specific offers. This is a *graph problem*, and that's exactly why we use a graph database.
-
-This project provides:
-- A **Spring Boot REST API** that manages all of these entities
-- An **Angular frontend** with a fixed layout (navbar + sidebar + scrollable content) for browsing products and expiring warranties
-- **Neo4j** as the database, storing entities as nodes and their connections as relationships
+* [Overview](#-overview)
+* [Use Case](#-use-case)
+* [Why a Graph Database?](#-why-a-graph-database)
+* [Core Graph Model](#-core-graph-model)
+* [Key Features](#-key-features)
+* [Tech Stack](#-tech-stack)
+* [Architecture](#-architecture)
+* [Important Graph Queries](#-important-graph-queries)
+* [Seed Data](#-seed-data)
+* [Setup Instructions](#-setup-instructions)
+* [Running the Application](#-running-the-application)
+* [Screenshots](#-screenshots)
+* [Future Scope](#-future-scope)
 
 ---
 
-## 🛠 Tech Stack
+# 🧩 Overview
 
-| Layer | Technology | Why? |
-|-------|-----------|------|
-| **Backend** | Spring Boot 4.0 + Java 25 | Industry-standard framework for building REST APIs. Spring's dependency injection and auto-configuration make setup effortless. |
-| **Database** | Neo4j (via Spring Data Neo4j) | Our data is all about *relationships* — customers own sales, products have warranties, warranties link to AMCs. A graph database models this naturally, unlike relational tables that need complex JOINs. |
-| **ORM** | Spring Data Neo4j (SDN) | Provides `Neo4jRepository` with built-in CRUD plus custom Cypher queries via `@Query`. No need to manage raw driver sessions. |
-| **Frontend** | Angular 21 (Standalone Components) | Modern component-based SPA framework with signals, lazy-loaded routes, and built-in HttpClient for API communication. |
-| **Build** | Maven (backend) + npm (frontend) | Standard build tools for Java and TypeScript respectively. |
-| **Code Gen** | Lombok | Eliminates boilerplate getters/setters/constructors on Java model classes. |
+**PSPL — Post-Sale Product Lifecycle & AMC Management System** is a full-stack application designed to track what happens to a product **after it has been sold**.
 
----
+The system models the complete lifecycle:
 
-## 🏗 System Architecture
-
-```mermaid
-graph TB
-    subgraph Frontend ["🖥️ Angular Frontend (Port 4200)"]
-        UI[Browser UI]
-        HC[HttpClient Services]
-        UI --> HC
-    end
-
-    subgraph Backend ["⚙️ Spring Boot Backend (Port 8080)"]
-        CORS[WebConfig - CORS Filter]
-        RC[REST Controllers]
-        SV[Service Layer]
-        RP[Repository Layer]
-        CORS --> RC
-        RC --> SV
-        SV --> RP
-    end
-
-    subgraph Database ["🗄️ Neo4j (Port 7687)"]
-        GDB[(Graph Database)]
-    end
-
-    HC -- "HTTP REST (JSON)" --> CORS
-    RP -- "Cypher Queries" --> GDB
-
-    style Frontend fill:#1a1a2e,color:#fff
-    style Backend fill:#16213e,color:#fff
-    style Database fill:#0f3460,color:#fff
+```text
+Customer
+   ↓
+Purchase / Sale
+   ↓
+Product
+   ↓
+Warranty
+   ↓
+AMC
+   ↓
+AMC Offer
 ```
 
-### How a request flows through the system:
+The important aspect of the project is that these are not isolated records. They form an interconnected graph.
 
-```mermaid
-sequenceDiagram
-    participant B as Browser
-    participant A as Angular HttpClient
-    participant C as Spring Controller
-    participant S as Spring Service
-    participant R as Neo4j Repository
-    participant N as Neo4j Database
+A customer can make multiple purchases, each sale can contain multiple products, products can have warranty coverage, and a warranty can subsequently be extended through multiple AMCs over time.
 
-    B->>A: User clicks "View Products"
-    A->>C: GET http://localhost:8080/products
-    C->>S: productService.getAllProducts()
-    S->>R: productRepository.findAll()
-    R->>N: MATCH (p:Product) RETURN p
-    N-->>R: [Product nodes]
-    R-->>S: List<Product>
-    S-->>C: List<Product>
-    C-->>A: 200 OK + JSON array
-    A-->>B: Render product cards
+The application provides a user-facing Angular interface for authentication, product management, warranty monitoring and product lifecycle operations, backed by a Spring Boot REST API and a CognoDB graph database.
+
+The underlying domain is intentionally designed to demonstrate where **relationship-oriented data modelling and graph traversal** provide value.
+
+---
+
+# 🎯 Use Case
+
+### The problem
+
+Traditional post-sale systems often treat information such as:
+
+* customers
+* purchases
+* products
+* warranties
+* maintenance contracts
+* contract offers
+
+as separate entities.
+
+The difficult part isn't storing each record — it is answering questions about **how those records are connected**.
+
+For example:
+
+> Which products belong to this customer?
+
+```text
+Customer
+   ↓ PURCHASED
+Sale
+   ↓ OF_PRODUCT
+Product
+```
+
+Or:
+
+> What coverage does this customer's product currently have?
+
+```text
+Customer
+   ↓
+Sale
+   ↓
+Product
+   ↓
+Warranty
+   ↓
+AMC
+   ↓
+AMCOffer
+```
+
+PSPL models these connections directly so that lifecycle-related questions can be answered through graph traversal.
+
+### Example business scenarios
+
+**Customer purchase history**
+
+```text
+Customer → Sales → Products
+```
+
+**Product coverage**
+
+```text
+Product → Warranty
+```
+
+**Post-warranty maintenance**
+
+```text
+Product → Warranty → AMC
+```
+
+**AMC plan identification**
+
+```text
+Product → Warranty → AMC → AMCOffer
+```
+
+**Customer's complete product lifecycle**
+
+```text
+Customer
+   ↓
+Purchase
+   ↓
+Product
+   ↓
+Warranty
+   ↓
+AMC 1
+   ↓
+AMC 2
+   ↓
+AMC 3
+```
+
+This last scenario is particularly important because the model supports **multiple successive AMCs for a single warranty**, allowing the lifecycle to continue beyond the original warranty period.
+
+---
+
+# 🕸️ Why a Graph Database?
+
+## Why CognoDB / Graph?
+
+The central characteristic of this application is **relationships**.
+
+The primary business questions are often traversal questions:
+
+> "Starting from this customer, what products did they purchase and what coverage do those products currently have?"
+
+That naturally translates into:
+
+```text
+Customer
+   ↓
+Sale
+   ↓
+Product
+   ↓
+Warranty
+   ↓
+AMC
+   ↓
+AMCOffer
+```
+
+In a graph database, these relationships are first-class elements of the data model.
+
+CognoDB provides a Neo4j-compatible graph database environment, allowing the application to use nodes, relationships and Cypher queries.
+
+---
+
+## Why not PostgreSQL/MySQL?
+
+A relational database could absolutely store this application.
+
+For example, a relational implementation might require tables such as:
+
+```text
+users
+customers
+sales
+products
+warranties
+amcs
+amc_offers
+```
+
+with foreign keys connecting them.
+
+A query spanning the entire lifecycle would then require several joins:
+
+```text
+Customer
+   JOIN Sale
+      JOIN Product
+         JOIN Warranty
+            JOIN AMC
+               JOIN AMCOffer
+```
+
+That isn't inherently wrong.
+
+The difference is that the **graph representation makes the domain relationships explicit and directly traversable**.
+
+### Relational model
+
+```text
+Customer
+   │
+   ├── customer_id
+   │
+   ▼
+Sale
+   │
+   ├── customer_id
+   └── ...
+```
+
+Connections are primarily represented through foreign-key columns.
+
+### Graph model
+
+```text
+(Customer)
+     │
+     │ PURCHASED
+     ▼
+   (Sale)
+     │
+     │ OF_PRODUCT
+     ▼
+ (Product)
+     │
+     │ HAS_WARRANTY
+     ▼
+(Warranty)
+     │
+     │ EXTENDED_BY
+     ▼
+   (AMC)
+     │
+     │ BASED_ON
+     ▼
+(AMCOffer)
+```
+
+The graph therefore makes the **business topology itself part of the database model**.
+
+This is particularly useful when the application needs to:
+
+* traverse multiple levels of relationships;
+* find related entities;
+* follow a customer's complete lifecycle;
+* determine what coverage is associated with a product;
+* identify maintenance contracts connected to warranties;
+* expand the domain with additional connected entities in the future.
+
+The project's database documentation defines these relationships as outgoing graph relationships with no relationship properties.
+
+---
+
+# 🧠 Core Graph Model
+
+The primary business graph is:
+
+```text
+(User)
+   │
+   │ IS_CUSTOMER
+   ▼
+(Customer)
+   │
+   │ PURCHASED
+   ▼
+(Sale)
+   │
+   │ OF_PRODUCT
+   ▼
+(Product)
+   │
+   │ HAS_WARRANTY
+   ▼
+(Warranty)
+   │
+   │ EXTENDED_BY
+   ▼
+(AMC)
+   │
+   │ BASED_ON
+   ▼
+(AMCOffer)
+```
+
+### Relationship semantics
+
+| From       | Relationship   | To         | Meaning                                        |
+| ---------- | -------------- | ---------- | ---------------------------------------------- |
+| `User`     | `IS_CUSTOMER`  | `Customer` | Authenticated account represents a customer    |
+| `Customer` | `PURCHASED`    | `Sale`     | Customer made a purchase                       |
+| `Sale`     | `OF_PRODUCT`   | `Product`  | Sale contains one or more products             |
+| `Product`  | `HAS_WARRANTY` | `Warranty` | Product has warranty coverage                  |
+| `Warranty` | `EXTENDED_BY`  | `AMC`      | Warranty lifecycle can continue through AMCs   |
+| `AMC`      | `BASED_ON`     | `AMCOffer` | AMC is based on a particular maintenance offer |
+
+The business graph supports one-to-many relationships such as:
+
+```text
+Customer ──▶ many Sales
+
+Sale ──▶ many Products
+
+Product ──▶ many Warranties
+
+Warranty ──▶ many AMCs
+```
+
+The AMC chain is intentionally capable of representing successive maintenance contracts rather than only a single extension.
+
+---
+
+## Example Node Properties
+
+### `User`
+
+```text
+id
+name
+email
+password
+createdAt
+updatedAt
+```
+
+Authentication is session-based, while the business lifecycle is represented through the graph.
+
+### `Customer`
+
+```text
+custId
+custName
+```
+
+### `Sale`
+
+```text
+saleId
+saleDate
+```
+
+### `Product`
+
+```text
+productSerialNumber
+productName
+productCreatedDate
+productCategory
+```
+
+### `Warranty`
+
+```text
+warrantyId
+warrantyStartDate
+warrantyEndDate
+```
+
+### `AMC`
+
+```text
+amcId
+amcStartDate
+amcEndDate
+```
+
+### `AMCOffer`
+
+```text
+offerId
+offerType
+offerDurationMonths
+offerPrice
+offerTerms
 ```
 
 ---
 
-## 🗂 Database Schema
+# ✨ Key Features
 
-Our Neo4j graph has **6 node types** connected by **5 relationship types**:
+### Authentication
 
-```mermaid
-graph LR
-    Customer((Customer))
-    Sale((Sale))
-    Product((Product))
-    Warranty((Warranty))
-    AMC((AMC))
-    AMCOffer((AMCOffer))
+* User signup
+* Login/logout
+* Session-based authentication
+* Session restoration
+* Password reset workflow
+* BCrypt password hashing
 
-    Customer -- ":PURCHASED" --> Sale
-    Sale -- ":OF_PRODUCT" --> Product
-    Product -- ":HAS_WARRANTY" --> Warranty
-    Warranty -- ":EXTENDED_BY" --> AMC
-    AMC -- ":BASED_ON" --> AMCOffer
+### Product Management
 
-    style Customer fill:#e94560,color:#fff
-    style Sale fill:#f59e0b,color:#fff
-    style Product fill:#4ecca3,color:#fff
-    style Warranty fill:#3b82f6,color:#fff
-    style AMC fill:#8b5cf6,color:#fff
-    style AMCOffer fill:#ec4899,color:#fff
+* Product listing
+* Product search
+* Server-side pagination
+* Product creation
+* Product details
+* Product editing
+* Product deletion
+* Automatic product serial generation
+* Product categories
+
+### Warranty Management
+
+* Warranty creation
+* Automatic warranty duration calculation
+* Warranty listing
+* Warranty expiry monitoring
+* Product → Warranty graph traversal
+
+### AMC Lifecycle
+
+The graph supports:
+
+```text
+Warranty
+   ↓
+AMC 1
+   ↓
+AMC 2
+   ↓
+AMC 3
 ```
 
-### Node Properties
+with each AMC connected to an `AMCOffer`.
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  Customer                                                │
-│  ├── custId: String (auto-generated)                     │
-│  └── custName: String                                    │
-├──────────────────────────────────────────────────────────┤
-│  Sale                                                    │
-│  ├── saleId: String (auto-generated)                     │
-│  └── saleDate: LocalDate                                 │
-├──────────────────────────────────────────────────────────┤
-│  Product                                                 │
-│  ├── productId: String (auto-generated)                  │
-│  ├── productName: String                                 │
-│  └── productSerialNumber: String                         │
-├──────────────────────────────────────────────────────────┤
-│  Warranty                                                │
-│  ├── warrantyId: String (auto-generated)                 │
-│  ├── warrantyStartDate: LocalDate                        │
-│  └── warrantyEndDate: LocalDate                          │
-├──────────────────────────────────────────────────────────┤
-│  AMC                                                     │
-│  ├── amcId: String (auto-generated)                      │
-│  ├── amcStartDate: LocalDate                             │
-│  └── amcEndDate: LocalDate                               │
-├──────────────────────────────────────────────────────────┤
-│  AMCOffer                                                │
-│  ├── offerId: String (auto-generated)                    │
-│  ├── offerType: String (Silver / Gold)                   │
-│  ├── offerDurationMonths: Integer                        │
-│  ├── offerPrice: Double                                  │
-│  └── offerTerms: String                                  │
-└──────────────────────────────────────────────────────────┘
-```
+### Seed Dataset
 
-### Relationship Chain (read it like a sentence)
+The repository includes deterministic seed data designed to create a meaningful interconnected graph rather than isolated test records.
 
-> A **Customer** `PURCHASED` a **Sale**, which is `OF_PRODUCT` a **Product**, which `HAS_WARRANTY` a **Warranty**, which can be `EXTENDED_BY` an **AMC**, which is `BASED_ON` an **AMCOffer**.
+The project documentation explicitly identifies the domain as Customer → Sale → Product → Warranty → AMC → AMC Offer.
 
 ---
 
-## 📁 Project Structure
+# 🛠 Tech Stack
 
+| Layer             | Technology                                |
+| ----------------- | ----------------------------------------- |
+| Frontend          | Angular 21                                |
+| Language          | TypeScript                                |
+| Backend           | Spring Boot 4                             |
+| Language          | Java                                      |
+| Database          | CognoDB / Neo4j-compatible graph database |
+| Database Access   | Spring Data Neo4j                         |
+| Query Language    | Cypher                                    |
+| Authentication    | Spring Security + HTTP Session            |
+| Password Security | BCrypt                                    |
+| Build             | Maven + npm                               |
+| UI State          | Angular Signals                           |
+
+The application follows the Angular standalone/signal-based frontend approach and Spring Boot + Spring Data Neo4j backend architecture described in the project documentation.
+
+---
+
+# 🏗️ Architecture
+
+```text
+┌──────────────────────────────────────┐
+│           Angular Frontend           │
+│                                      │
+│ Components                           │
+│ Services                             │
+│ Signals / UI State                   │
+└─────────────────┬────────────────────┘
+                  │
+                  │ HTTP / REST
+                  ▼
+┌──────────────────────────────────────┐
+│          Spring Boot Backend         │
+│                                      │
+│ Controllers                          │
+│       ↓                              │
+│ Services                             │
+│       ↓                              │
+│ Repositories                         │
+└─────────────────┬────────────────────┘
+                  │
+                  │ Cypher
+                  ▼
+┌──────────────────────────────────────┐
+│             CognoDB                  │
+│          Graph Database              │
+│                                      │
+│ Nodes + Relationships                │
+└──────────────────────────────────────┘
 ```
-amcProject/
-├── pom.xml                              # Maven build config
-├── src/main/java/com/postSale/amcProject/
-│   ├── AmcProjectApplication.java       # Spring Boot entry point
-│   ├── config/
-│   │   └── WebConfig.java               # CORS configuration
-│   ├── controllers/                     # REST API endpoints
-│   │   ├── CustomerController.java
-│   │   ├── ProductController.java
-│   │   ├── SaleController.java
-│   │   ├── WarrantyController.java
-│   │   ├── AMCController.java
-│   │   └── AMCOfferController.java
-│   ├── Services/                        # Business logic
-│   │   ├── CustomerService.java
-│   │   ├── ProductService.java
-│   │   ├── SaleService.java
-│   │   ├── WarrantyService.java
-│   │   ├── AMCService.java
-│   │   └── AMCOfferService.java
-│   ├── Repositories/                    # Neo4j data access
-│   │   ├── CustomerRepository.java
-│   │   ├── ProductRepository.java
-│   │   ├── SaleRepository.java
-│   │   ├── WarrantyRepository.java
-│   │   ├── AMCRepository.java
-│   │   └── AMCOfferRepository.java
-│   ├── Model/nodes/                     # Neo4j node entities
-│   │   ├── Customer.java
-│   │   ├── Product.java
-│   │   ├── Sale.java
-│   │   ├── Warranty.java
-│   │   ├── AMC.java
-│   │   └── AMCOffer.java
-│   └── Exceptions/                      # Error handling
-│       ├── GlobalExceptionHandler.java
-│       └── ResourceNotFoundException.java
-│
-├── frontend/                            # Angular application
-│   ├── src/app/
-│   │   ├── app.ts / app.html / app.css  # Root shell component
-│   │   ├── app.config.ts                # Providers (HttpClient, Router)
-│   │   ├── app.routes.ts                # Lazy-loaded route definitions
-│   │   ├── models/                      # TypeScript interfaces
-│   │   ├── services/                    # HttpClient API services
-│   │   ├── layout/                      # Navbar + Sidebar
-│   │   └── pages/                       # Home, ProductCreate, ProductDetail, About, Contact, Profile
-│   └── src/environments/               # API base URL config
+
+The backend follows a controller → service → repository flow, while the frontend communicates with the backend through HTTP services.
+
+---
+
+# 🔎 Important Graph Queries
+
+The project doesn't use Cypher merely to store nodes. The important queries demonstrate **why the relationships exist**.
+
+## 1. Find all products owned by a customer
+
+```cypher
+MATCH (c:Customer)-[:PURCHASED]->(s:Sale)-[:OF_PRODUCT]->(p:Product)
+WHERE c.custId = $customerId
+RETURN DISTINCT p
+ORDER BY p.productName ASC
+```
+
+### Graph problem solved
+
+Instead of querying a Product table and manually resolving ownership through foreign keys, the query follows:
+
+```text
+Customer
+   ↓ PURCHASED
+Sale
+   ↓ OF_PRODUCT
+Product
+```
+
+This directly answers:
+
+> "Which products has this customer purchased?"
+
+This traversal is currently used by the product-access flow.
+
+---
+
+## 2. Find a customer's specific product
+
+```cypher
+MATCH (c:Customer)-[:PURCHASED]->(s:Sale)-[:OF_PRODUCT]->(p:Product)
+WHERE c.custId = $customerId
+  AND p.productSerialNumber = $productSerialNumber
+RETURN p
+```
+
+### Graph problem solved
+
+This combines **ownership verification and product lookup** in one traversal:
+
+```text
+Customer
+   ↓
+Sale
+   ↓
+Product
+```
+
+It prevents the application from treating a product as belonging to a customer merely because its serial number exists.
+
+---
+
+## 3. Find warranties belonging to a product
+
+```cypher
+MATCH (p:Product)-[:HAS_WARRANTY]->(w:Warranty)
+RETURN w
+ORDER BY w.warrantyStartDate ASC
+```
+
+### Graph problem solved
+
+The query follows the direct lifecycle relationship:
+
+```text
+Product → Warranty
+```
+
+This is useful for determining the coverage history of a product.
+
+---
+
+## 4. Find the complete post-sale lifecycle
+
+The graph can be traversed across the entire domain:
+
+```cypher
+MATCH (c:Customer)-[:PURCHASED]->(s:Sale)
+      -[:OF_PRODUCT]->(p:Product)
+      -[:HAS_WARRANTY]->(w:Warranty)
+      -[:EXTENDED_BY]->(a:AMC)
+      -[:BASED_ON]->(o:AMCOffer)
+WHERE c.custId = $customerId
+RETURN c, s, p, w, a, o
+```
+
+### Graph problem solved
+
+This is the core value proposition of the database.
+
+One traversal can answer:
+
+> "Show me the customer's purchase, the product, its warranty, every AMC extension, and the offer associated with each AMC."
+
+The graph structure is explicitly designed around this chain.
+
+---
+
+# 🌱 Seed Data
+
+The repository includes a dedicated seed-data mechanism.
+
+The goal is to allow a fresh CognoDB instance to become usable without manually creating every node and relationship.
+
+### Seed flow
+
+```text
+Create CognoDB instance
+        ↓
+Configure credentials
+        ↓
+Enable seed data
+        ↓
+Start backend
+        ↓
+Seed script creates graph
+        ↓
+Database populated
+        ↓
+Start frontend
+        ↓
+Use application
+```
+
+The seed dataset creates multiple users and interconnected business data rather than only isolated users/products.
+
+The resulting graph demonstrates:
+
+```text
+User
+ ↓
+Customer
+ ↓
+Multiple Sales
+ ↓
+Multiple Products
+ ↓
+Warranty
+ ↓
+0..N AMCs
+ ↓
+AMC Offers
+```
+
+This is important because the graph queries should operate against realistic relationships rather than a collection of disconnected demo nodes.
+
+---
+
+# ⚙️ Setup Instructions
+
+## 1. Create a CognoDB account
+
+Create an account with **CognoDB** and access the database/cloud console.
+
+---
+
+## 2. Create a CognoDB instance
+
+Create a new database instance.
+
+After the instance is provisioned, obtain its connection details.
+
+You will need:
+
+```text
+Database URI
+Username
+Password
 ```
 
 ---
 
-## 🌐 REST API Endpoints
+## 3. Obtain database credentials
 
-### Customers (`/customers`)
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/customers` | Create a new customer |
-| `GET` | `/customers` | List all customers |
-| `GET` | `/customers/{id}` | Get customer by ID |
-| `PUT` | `/customers` | Update a customer |
-| `DELETE` | `/customers/{id}` | Delete a customer |
+Your application needs the CognoDB connection credentials used by Spring Data Neo4j.
 
-### Products (`/products`)
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/products` | Create a new product |
-| `GET` | `/products` | List all products |
-| `GET` | `/products/{id}` | Get product by ID |
-| `PUT` | `/products` | Update a product |
-| `DELETE` | `/products/{id}` | Delete a product |
-
-### Sales (`/sales`)
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/sales` | Create a new sale |
-| `GET` | `/sales/{id}` | Get sales by customer ID |
-
-### Warranties (`/warranty`)
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/warranty` | Get all warranties expiring within 30 days |
-| `GET` | `/warranty/{id}` | Get warranties by customer ID |
-
-### AMCs (`/amcs`)
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/amcs` | Create a new AMC |
-| `GET` | `/amcs` | List all AMCs |
-| `GET` | `/amcs/{id}` | Get AMC by ID |
-| `PUT` | `/amcs` | Update an AMC |
-| `DELETE` | `/amcs/{id}` | Delete an AMC |
-
-### AMC Offers (`/amc-offers`)
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/amc-offers` | Create a new offer |
-| `GET` | `/amc-offers` | List all offers |
-| `GET` | `/amc-offers/{id}` | Get offer by ID |
-| `PUT` | `/amc-offers` | Update an offer |
-| `DELETE` | `/amc-offers/{id}` | Delete an offer |
+Do **not** commit these credentials to GitHub.
 
 ---
 
-## ⚡ Setup Instructions
+## 4. Configure environment variables
 
-### Prerequisites
+Configure the following environment variables:
 
-Make sure you have these installed:
+```text
+NEO4J_URI
+NEO4J_USERNAME
+NEO4J_PASSWORD
+```
 
-| Tool | Version | Download |
-|------|---------|----------|
-| **Java JDK** | 25+ | [Oracle JDK](https://www.oracle.com/java/technologies/downloads/) |
-| **Maven** | 3.9+ | [Maven](https://maven.apache.org/download.cgi) (or use the included `mvnw`) |
-| **Node.js** | 20+ | [Node.js](https://nodejs.org/) |
-| **Neo4j** | 5.x | [Neo4j Desktop](https://neo4j.com/download/) or [Neo4j Aura](https://neo4j.com/cloud/aura/) |
+Example on Windows PowerShell:
 
-### Step 1: Start Neo4j
+```powershell
+$env:NEO4J_URI="your-cognodb-uri"
+$env:NEO4J_USERNAME="your-username"
+$env:NEO4J_PASSWORD="your-password"
+```
 
-**Option A — Neo4j Desktop (Local)**
-1. Download and install [Neo4j Desktop](https://neo4j.com/download/)
-2. Create a new project → Add a Database → Start it
-3. Note the **Bolt URL** (usually `bolt://localhost:7687`), **username** (`neo4j`), and **password** (you set this)
+Example:
 
-**Option B — Neo4j Aura (Cloud)**
-1. Go to [Neo4j Aura](https://neo4j.com/cloud/aura/) and create a free instance
-2. Copy the connection URI, username, and password
+```text
+NEO4J_URI=bolt+s://your-instance...
+NEO4J_USERNAME=...
+NEO4J_PASSWORD=...
+```
 
-### Step 2: Configure the Backend
+The application uses the Neo4j-compatible connection configuration provided to Spring Data Neo4j.
 
-Set your Neo4j credentials as environment variables:
+---
+
+## 5. Enable seed data
+
+The seed mechanism is controlled using:
+
+```properties
+app.seed-data=true
+```
+
+Set this in the backend configuration/environment for the initial database population.
+
+The seed process is designed to avoid recreating the dataset when users already exist.
+
+### Important
+
+After the initial seed, you can disable it:
+
+```properties
+app.seed-data=false
+```
+
+This prevents accidental reseeding when starting the application normally.
+
+---
+
+## 6. Start the backend
+
+From the backend project directory:
 
 ```bash
-# Windows PowerShell
-$env:NEO4J_URI = "bolt://localhost:7687"
-$env:NEO4J_USERNAME = "neo4j"
-$env:NEO4J_PASSWORD = "your-password-here"
-
-# macOS / Linux
-export NEO4J_URI=bolt://localhost:7687
-export NEO4J_USERNAME=neo4j
-export NEO4J_PASSWORD=your-password-here
+mvnw spring-boot:run
 ```
 
-> 💡 **Tip:** These map to the `${NEO4J_URI}`, `${NEO4J_USERNAME}`, and `${NEO4J_PASSWORD}` placeholders in `application.properties`.
+On Windows:
 
-### Step 3: Start the Backend
-
-```bash
-# From the project root directory
-./mvnw spring-boot:run
-
-# Or on Windows
-mvnw.cmd spring-boot:run
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
 
-The API will be available at **http://localhost:8080**.
+The Spring Boot application runs on:
 
-Test it with:
-```bash
-curl http://localhost:8080/products
+```text
+http://localhost:8080
 ```
 
-### Step 4: Install Frontend Dependencies
+---
+
+## 7. Start the frontend
+
+Open another terminal and navigate to the Angular application:
 
 ```bash
-cd frontend
 npm install
 ```
 
-### Step 5: Start the Frontend
+Then:
 
 ```bash
 npm start
 ```
 
-The Angular app will be available at **http://localhost:4200**.
+The Angular development server runs on:
+
+```text
+http://localhost:4200
+```
 
 ---
 
-## 🏃 Running the Application
+## 8. Access the application
 
-Once everything is running, you should have:
+Open:
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Neo4j Browser** | http://localhost:7474 | Visual database explorer |
-| **Spring Boot API** | http://localhost:8080 | REST API |
-| **Angular Frontend** | http://localhost:4200 | Web UI |
+```text
+http://localhost:4200
+```
 
-Open **http://localhost:4200** in your browser. You'll see:
-- A **fixed navbar** at the top with navigation links
-- A **collapsible sidebar** on the left showing your products and expiring warranties
-- A **scrollable main content area** with product/warranty cards, search, and pagination
+You can then:
 
----
-
-## ❓ FAQ
-
-**Q: Why Neo4j instead of PostgreSQL/MySQL?**
-> Our data is fundamentally about *relationships*. Querying "find all warranties for all products in all sales for a specific customer" in SQL would require 4 JOINs. In Neo4j, it's a single `MATCH` traversal that reads like English.
-
-**Q: What's the difference between SDN and the Neo4j Driver?**
-> **Spring Data Neo4j (SDN)** is the ORM layer we use — it maps Java classes to Neo4j nodes using annotations like `@Node` and `@Relationship`. The **Neo4j Java Driver** is the lower-level transport that SDN uses internally to send Cypher queries over the Bolt protocol. We get the best of both worlds: simple `save()`/`findAll()` for basic CRUD, and custom `@Query` annotations for complex traversals.
-
-**Q: Why Angular 21 with Standalone Components?**
-> Standalone components (no NgModules) are the modern Angular pattern. Combined with signals for reactive state and `loadComponent` for lazy loading, this gives us a clean, performant, and maintainable frontend.
-
-**Q: Why is there a CORS configuration?**
-> The frontend (port 4200) and backend (port 8080) are on different origins. Browsers block cross-origin requests by default for security. Our `WebConfig.java` tells Spring to allow requests from `http://localhost:4200`.
+1. Log in using a seeded user.
+2. Browse products.
+3. View product details.
+4. View warranty information.
+5. Create/update/delete products.
+6. Explore the connected post-sale lifecycle through the application/API.
 
 ---
 
-<p align="center">
-  Built with ❤️ using Spring Boot, Neo4j, and Angular
-</p>
+# 🔐 Seed Credentials
+
+The development seed dataset uses a common demo password for seeded accounts:
+
+```text
+Password123!
+```
+
+The password is stored as a BCrypt hash rather than plaintext in the database.
+
+**Use these credentials only for local/demo development.**
+
+---
+
+# 📸 Screenshots
+
+> Replace the placeholders below with screenshots from the running application.
+
+## Login
+
+<!-- SCREENSHOT: Login Page -->
+![Login Page](img.png)
 
 
+---
+
+## Sign Up
+
+<!-- SCREENSHOT: Signup Page -->
+
+![Signup Page](img_1.png)
+
+---
+
+## Dashboard / Home
+
+<!-- SCREENSHOT: Home Page -->
+
+![Home Page](img_2.png)
+
+---
+
+## Product Details
+
+<!-- SCREENSHOT: Product Details -->
+
+![Product Details](img_3.png)
+
+---
+
+## Warranty Details
+
+<!-- SCREENSHOT: Warranty Details -->
+
+![Warranty Details](img_4.png)
+
+---
+
+## Create Purchase
+
+<!-- SCREENSHOT: Purchase Creation -->
+
+![Create Purchase](img_5.png)
+
+---
+
+# 🚀 Future Scope
+
+The current system establishes the core post-sale graph. The architecture can be extended to support additional lifecycle operations.
+
+Potential extensions include:
+
+### AMC Management UI
+
+Expose the existing AMC domain through dedicated UI screens:
+
+```text
+Warranty
+   ↓
+AMC
+   ↓
+AMC Offer
+```
+
+### Service / Maintenance History
+
+Add:
+
+```text
+Product
+   ↓
+ServiceRequest
+   ↓
+Technician
+```
+
+This would allow the graph to answer questions such as:
+
+> Which service requests were raised for this product?
+
+---
+
+### Customer 360 View
+
+A dedicated customer view could traverse:
+
+```text
+Customer
+ ├── Sales
+ │    └── Products
+ │         └── Warranties
+ │              └── AMCs
+ │                   └── Offers
+ └── Service History
+```
+
+This would turn the graph into a complete **customer/product lifecycle view**.
+
+---
+
+### Warranty & AMC Notifications
+
+The system could proactively identify:
+
+* warranties approaching expiry;
+* AMCs approaching expiry;
+* products without active coverage;
+* customers requiring renewal.
+
+---
+
+### Graph Analytics
+
+The graph can eventually support analytics such as:
+
+```text
+Customers with expiring warranties
+        ↓
+Products requiring renewal
+        ↓
+Recommended AMC offers
+```
+
+This provides a foundation for turning PSPL from a CRUD application into a more relationship-aware **post-sale lifecycle platform**.
+
+---
+
+# 📁 Project Documentation
+
+The repository also contains detailed documentation covering the project's architecture, feature inventory, API design, database model, user flows, architecture audit, rebuild blueprint and coding standards.
+
+---
+
+## 📄 Project Summary
+
+**PSPL is a graph-driven post-sale lifecycle management system that models the complete journey of a purchased product — from customer and sale to warranty and successive AMC coverage — using Spring Boot, Angular and CognoDB.**
+
+The core idea is simple:
+
+```text
+Don't just store the entities.
+
+Store the relationships between them.
+```
+
+And then use those relationships to answer lifecycle questions through **graph traversal**.

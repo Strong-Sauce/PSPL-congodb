@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class CustomerService {
@@ -20,33 +21,36 @@ public class CustomerService {
 
     @Transactional
     public Customer createCust(Customer customer) {
-        return customerRepository.save(customer);
+        customer.setCustId(UUID.randomUUID().toString());
+        customerRepository.createCustomer(customer.getCustId(), customer.getCustName());
+        return customer;
     }
 
     @Transactional
     public Customer updateCus(Customer customers) {
-        if (!customerRepository.existsById(customers.getCustId())) {
+        if (!customerRepository.existsCustomerById(customers.getCustId())) {
             throw new ResourceNotFoundException("Customer", customers.getCustId());
         }
-        return customerRepository.save(customers);
+        customerRepository.updateCustomer(customers.getCustId(), customers.getCustName());
+        return customers;
     }
 
     @Transactional(readOnly = true)
     public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+        return customerRepository.findAllCustomers();
     }
 
     @Transactional(readOnly = true)
     public Optional<Customer> getCustomerById(String id) {
-        return customerRepository.findById(id);
+        return customerRepository.findCustomerById(id);
     }
 
     @Transactional
     public boolean deleteCustomer(String id) {
-        if (!customerRepository.existsById(id)) {
+        if (!customerRepository.existsCustomerById(id)) {
             throw new ResourceNotFoundException("Customer", id);
         }
-        customerRepository.deleteById(id);
+        customerRepository.deleteCustomerByAppId(id);
         return true;
     }
 }

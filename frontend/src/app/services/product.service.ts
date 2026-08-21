@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import {Injectable, inject, signal} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Product } from '../models';
@@ -8,6 +8,12 @@ import { environment } from '../../environments/environment';
 export class ProductService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/products`;
+
+  readonly productsRefresh = signal(0);
+
+  refreshProducts(): void {
+    this.productsRefresh.update(value => value + 1);
+  }
 
   getAllProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(this.baseUrl);
@@ -29,4 +35,3 @@ export class ProductService {
     return this.http.delete<void>(`${this.baseUrl}/${productSerialNumber}`);
   }
 }
-

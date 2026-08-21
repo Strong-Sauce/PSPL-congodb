@@ -8,16 +8,17 @@ import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
 @Setter
 @Node
 public class Sale {
-    @Id @GeneratedValue
+    @Id
     private String saleId;
     private LocalDate saleDate;
 
     @Relationship(type = "OF_PRODUCT", direction = Relationship.Direction.OUTGOING)
-    private List<Product> productList;
+    private List<Product> productList = new ArrayList<>();
 }

@@ -45,6 +45,31 @@ Credentials (demo)
 - All seeded users use the same demo password: Password123!
 - Passwords are stored only as BCrypt hashes via the application's PasswordEncoder.
 - Each user's email is deterministic (name-based) and can be observed in the database or console logs.
+  - all emails are as follows:
+
+    
+    bob.patel@example.com
+    
+    alice.monroe@example.com    
+
+    carol.nguyen@example.com 
+    
+    david.chen@example.com
+ 
+    esha.roy@example.com
+ 
+    franklin.king@example.com
+
+    grace.lee@example.com
+
+    hassan.ali@example.com
+
+    isha.kapoor@example.com
+
+    jorge.silva@example.com
+
+
+
 
 Determinism & re-runs
 ---------------------

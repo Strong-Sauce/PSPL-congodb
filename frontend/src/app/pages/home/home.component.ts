@@ -5,6 +5,7 @@ import { Product, Warranty } from '../../models';
 import { ProductService } from '../../services/product.service';
 import { WarrantyService } from '../../services/warranty.service';
 import { WarrantyStatus } from '../../models/warranty.model';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -21,7 +22,10 @@ export class HomeComponent implements OnInit {
   allProducts = signal<Product[]>([]);
   productSearch = signal('');
   productPage = signal(0);
-  readonly productPageSize = 5;
+  readonly productPageSize = 4;
+  // Loading states
+  productLoading = signal(true);
+  warrantyLoading = signal(true);
 
   filteredProducts = computed(() => {
     const term = this.productSearch().trim().toLowerCase();
@@ -47,7 +51,7 @@ export class HomeComponent implements OnInit {
   warrantySearch = signal('');
   selectedWarrantyStatus = signal<WarrantyStatus | 'ALL'>('ALL');
   warrantyPage = signal(0);
-  readonly warrantyPageSize = 5;
+  readonly warrantyPageSize = 4;
 
   filteredWarranties = computed(() => {
     const term = this.warrantySearch().trim().toLowerCase();
@@ -81,12 +85,25 @@ export class HomeComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    this.productService.getAllProducts().subscribe({
-      next: (data) => this.allProducts.set(data),
-    });
-    this.warrantyService.getAllWarranties().subscribe({
-      next: (data) => this.allWarranties.set(data),
-    });
+    this.productLoading.set(true);
+
+    this.productService
+      .getAllProducts()
+      .pipe(finalize(() => this.productLoading.set(false)))
+      .subscribe({
+        next: (data) => this.allProducts.set(data),
+        error: () => this.allProducts.set([]),
+      });
+
+    this.warrantyLoading.set(true);
+
+    this.warrantyService
+      .getAllWarranties()
+      .pipe(finalize(() => this.warrantyLoading.set(false)))
+      .subscribe({
+        next: (data) => this.allWarranties.set(data),
+        error: () => this.allWarranties.set([]),
+      });
   }
 
   onProductSearch(term: string): void {

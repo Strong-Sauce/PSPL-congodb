@@ -1,10 +1,248 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+<div class="page-container">
+
+  <div class="page-header">
+
+    <a routerLink="/" class="back-link">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+
+      Back
+    </a>
+
+    <h1>Add Purchase</h1>
+
+    <p class="page-description">
+      Register one or more products purchased together.
+    </p>
+
+  </div>
+
+
+  @if (errorMsg()) {
+  <div class="alert alert-error">
+    {{ errorMsg() }}
+  </div>
+  }
+
+
+  <form
+    class="purchase-form"
+    (ngSubmit)="onSubmit()"
+  >
+
+    <!-- PURCHASE DETAILS -->
+
+    <section
+      class="form-card"
+      [class.loading-section]="submitting()"
+    >
+
+      <div class="section-header">
+        <div>
+          <h2>Purchase Details</h2>
+          <p>Enter the date of this purchase.</p>
+        </div>
+      </div>
+
+      <div class="form-group">
+
+        <label for="saleDate">
+          Purchase Date *
+        </label>
+
+        <input
+          id="saleDate"
+          type="date"
+          [ngModel]="saleDate()"
+          (ngModelChange)="saleDate.set($event)"
+          name="saleDate"
+          required
+          [disabled]="submitting()"
+        />
+
+      </div>
+
+    </section>
+
+
+    <!-- PRODUCTS -->
+
+    <section
+      class="form-card"
+      [class.loading-section]="submitting()"
+    >
+
+      <div class="section-header products-header">
+
+        <div>
+          <h2>Products</h2>
+
+          <p>
+            Add every product included in this purchase.
+          </p>
+        </div>
+
+        <span class="product-count">
+          {{ products().length }}
+          {{ products().length === 1 ? 'Product' : 'Products' }}
+        </span>
+
+      </div>
+
+
+      <div class="products-list">
+
+        @for (product of products(); track $index; let i = $index) {
+
+        <div class="product-card">
+
+          <div class="product-card-header">
+
+            <div class="product-number">
+              Product {{ i + 1 }}
+            </div>
+
+            @if (products().length > 1) {
+
+            <button
+              type="button"
+              class="remove-button"
+              (click)="removeProduct(i)"
+              [disabled]="submitting()"
+            >
+              Remove
+            </button>
+
+            }
+
+          </div>
+
+
+          <div class="product-fields">
+
+            <div class="form-group">
+
+              <label [for]="'productName-' + i">
+                Product Name *
+              </label>
+
+              <input
+                [id]="'productName-' + i"
+                type="text"
+                placeholder="Enter product name"
+                [ngModel]="product.productName"
+                (ngModelChange)="updateProductName(i, $event)"
+                [name]="'productName-' + i"
+                required
+                [disabled]="submitting()"
+              />
+
+            </div>
+
+
+            <div class="form-group">
+
+              <label [for]="'productCategory-' + i">
+                Product Category *
+              </label>
+
+              <select
+                [id]="'productCategory-' + i"
+                [ngModel]="product.productCategory"
+                (ngModelChange)="updateProductCategory(i, $event)"
+                [name]="'productCategory-' + i"
+                required
+                [disabled]="submitting()"
+              >
+
+                <option
+                  [ngValue]="null"
+                  disabled
+                >
+                  Select category
+                </option>
+
+                @for (
+                category of productCategories;
+                track category
+                ) {
+
+                <option [ngValue]="category">
+                  {{ category }}
+                </option>
+
+                }
+
+              </select>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        }
+
+      </div>
+
+
+      <button
+        type="button"
+        class="add-product-button"
+        (click)="addProduct()"
+        [disabled]="submitting()"
+      >
+        <span class="plus-icon">+</span>
+        Add Product
+      </button>
+
+    </section>
+
+
+    <!-- ACTIONS -->
+
+    <div class="form-actions">
+
+      <a
+        routerLink="/"
+        class="btn btn-secondary"
+        [class.disabled-link]="submitting()"
+        [attr.aria-disabled]="submitting()"
+      >
+        Cancel
+      </a>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="submitting()"
+      >
+
+        @if (submitting()) {
+
+        <span class="loading-content">
+            <span class="spinner"></span>
+            Creating Purchase...
+          </span>
+
+        } @else {
+
+        Create Purchase
+
+        }
+
+      </button>
+
+    </div>
+
+  </form>
+
+</div>

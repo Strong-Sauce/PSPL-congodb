@@ -243,3 +243,106 @@
   margin-top: 4px;
 }
 
+/* =========================================================
+   WARRANTY DETAIL SKELETON
+   ========================================================= */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #eeeeee;
+  border-radius: 6px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  transform: translateX(-100%);
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+
+/* Icon */
+
+.skeleton-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+}
+
+
+/* Labels */
+
+.skeleton-label {
+  display: block;
+  width: 90px;
+  height: 14px;
+}
+
+
+/* Values */
+
+.skeleton-value {
+  display: block;
+  height: 14px;
+}
+
+.skeleton-value.short {
+  width: 90px;
+}
+
+.skeleton-value.medium {
+  width: 150px;
+}
+
+.skeleton-value.long {
+  width: 210px;
+}
+
+
+/* Bottom button */
+
+.skeleton-button {
+  width: 120px;
+  height: 34px;
+  margin-top: 16px;
+  border-radius: 8px;
+}
+
+
+/* Slightly different background for the skeleton card */
+
+.skeleton-card {
+  pointer-events: none;
+}
+
+
+/* Mobile */
+
+@media (max-width: 600px) {
+
+  .skeleton-value.long {
+    width: 160px;
+  }
+
+  .skeleton-value.medium {
+    width: 120px;
+  }
+
+}

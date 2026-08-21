@@ -8,6 +8,7 @@ import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -20,5 +21,5 @@ public class Warranty {
     private LocalDate warrantyEndDate;
 
     @Relationship(type = "EXTENDED_BY", direction = Relationship.Direction.OUTGOING)
-    private List<AMC> amcList;
+    private List<AMC> amcList = new ArrayList<>();
 }

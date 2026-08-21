@@ -8,17 +8,18 @@ import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
 @Setter
 @Node
 public class AMC {
-    @Id @GeneratedValue
+    @Id
     private String amcId;
     private LocalDate amcStartDate;
     private LocalDate amcEndDate;
 
     @Relationship(type = "BASED_ON", direction = Relationship.Direction.OUTGOING)
-    private List<AMCOffer> amcOfferList;
+    private List<AMCOffer> amcOfferList = new ArrayList<>();
 }

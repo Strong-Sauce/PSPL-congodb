@@ -1,8 +1,7 @@
 package com.postSale.amcProject.config;
 
 import com.postSale.amcProject.Model.enums.ProductCategory;
-import com.postSale.amcProject.Model.nodes.*;
-import com.postSale.amcProject.Repositories.*;
+import com.postSale.amcProject.Repositories.SeedDataRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -20,185 +19,491 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequiredArgsConstructor
 public class SeedDataConfig {
 
-    private final UserRepository userRepository;
-    private final CustomerRepository customerRepository;
-    private final ProductRepository productRepository;
-    private final SaleRepository saleRepository;
-    private final WarrantyRepository warrantyRepository;
-    private final AMCRepository amcRepository;
-    private final AMCOfferRepository amcOfferRepository;
+    private final SeedDataRepository seedDataRepository;
     private final PasswordEncoder passwordEncoder;
     private final Environment env;
 
     @Bean
     public ApplicationRunner seedDataRunner() {
+
         return args -> {
-            // Only seed when property app.seed-data=true is set (safe default: disabled)
-            boolean doSeed = Boolean.parseBoolean(env.getProperty("app.seed-data", "false"));
+
+            // =========================================================
+            // 0. CHECK WHETHER SEEDING IS ENABLED
+            // =========================================================
+
+            boolean doSeed = Boolean.parseBoolean(
+                    env.getProperty("app.seed-data", "false")
+            );
+
             if (!doSeed) {
                 return;
             }
 
-            // Avoid reseeding if users already exist
-            if (userRepository.count() > 0) {
-                System.out.println("Seed: Users already present - skipping seed to avoid duplicates.");
+            // =========================================================
+            // 1. PREVENT DUPLICATE SEEDING
+            // =========================================================
+
+            if (seedDataRepository.countUsers() > 0) {
+                System.out.println(
+                        "Seed: Users already exist. Skipping seed to avoid duplicates."
+                );
                 return;
             }
 
-            System.out.println("Seed: Starting deterministic seed data (app.seed-data=true)");
+            System.out.println("=================================================");
+            System.out.println("Seed: Starting database seed...");
+            System.out.println("=================================================");
 
-            // 1) AMC Offers (reusable)
-            List<AMCOffer> offers = new ArrayList<>();
-            offers.add(buildOffer("OFFER-SILVER", "Silver", 12, 99.0, "Basic coverage"));
-            offers.add(buildOffer("OFFER-GOLD", "Gold", 24, 179.0, "Extended parts & labor"));
-            offers.add(buildOffer("OFFER-PLAT", "Platinum", 36, 299.0, "Premium on-site support"));
-            offers.add(buildOffer("OFFER-BASIC", "Basic", 6, 49.0, "Limited remote support"));
-            offers.add(buildOffer("OFFER-PREMIUM", "Premium", 18, 199.0, "Priority SLA"));
-            amcOfferRepository.saveAll(offers);
 
-            // 2) Products
-            List<Product> products = new ArrayList<>();
-            AtomicInteger serialCounter = new AtomicInteger(1000);
+            // =========================================================
+            // 2. CREATE AMC OFFERS
+            // =========================================================
 
-            // Create a mix of product types with deterministic created dates
-            for (ProductCategory cat : ProductCategory.values()) {
-                // create 8 products per category approximately to hit 30-50 products
-                for (int i = 0; i < 6; i++) {
-                    Product p = new Product();
-                    String serial = cat.getSerialPrefix() + "-" + serialCounter.getAndIncrement();
-                    p.setProductSerialNumber(serial);
-                    p.setProductName(cat.getDisplayName() + " Model " + (100 + i));
-                    // product created date spread over the last 36 months deterministically
-                    p.setProductCreatedDate(LocalDate.now().minusMonths((i * 3) + (cat.ordinal() * 2)));
-                    p.setProductCategory(cat);
-                    products.add(p);
-                }
-            }
-            productRepository.saveAll(products);
+            seedOffers();
 
-            // 3) Warranties - one per product, using category default months
-            List<Warranty> warranties = new ArrayList<>();
-            AtomicInteger warrantyCounter = new AtomicInteger(2000);
-            for (Product p : products) {
-                Warranty w = new Warranty();
-                w.setWarrantyId("W-" + warrantyCounter.getAndIncrement());
-                LocalDate start = p.getProductCreatedDate().plusDays(7); // warranty starts 1 week after creation
-                int months = p.getProductCategory().getDefaultWarrantyMonths();
-                LocalDate end = start.plusMonths(months);
-                w.setWarrantyStartDate(start);
-                w.setWarrantyEndDate(end);
-                warrantyRepository.save(w);
+            System.out.println("Seed: AMC offers created.");
 
-                // Link product -> warranty
-                p.getWarrantyList().add(w);
-                productRepository.save(p);
-                warranties.add(w);
-            }
 
-            // 4) AMC sequences for many warranties (0..3 sequential AMCs)
-            AtomicInteger amcCounter = new AtomicInteger(3000);
-            for (int i = 0; i < warranties.size(); i++) {
-                Warranty w = warranties.get(i);
-                // Decide how many AMCs: deterministic based on index
-                int numAmcs = (i % 5 == 0) ? 3 : (i % 3 == 0) ? 2 : (i % 7 == 0) ? 1 : 0;
-                LocalDate prevEnd = w.getWarrantyEndDate();
-                for (int a = 0; a < numAmcs; a++) {
-                    AMC amc = new AMC();
-                    amc.setAmcId("AMC-" + amcCounter.getAndIncrement());
-                    // start the AMC the day after previous end
-                    LocalDate start = prevEnd.plusDays(1);
-                    // pick an offer to base on deterministically
-                    AMCOffer offer = offers.get((i + a) % offers.size());
-                    int months = offer.getOfferDurationMonths();
-                    LocalDate end = start.plusMonths(months).minusDays(1);
-                    amc.setAmcStartDate(start);
-                    amc.setAmcEndDate(end);
-                    // link to offer
-                    amc.getAmcOfferList().add(offer);
-                    amcRepository.save(amc);
+            // =========================================================
+            // 3. CREATE PRODUCTS + WARRANTIES
+            // =========================================================
 
-                    // link warranty -> amc
-                    w.getAmcList().add(amc);
-                    warrantyRepository.save(w);
+            List<SeedProduct> products = seedProducts();
 
-                    // set next previous end
-                    prevEnd = end;
-                }
-            }
+            System.out.println(
+                    "Seed: Products + warranties created: "
+                            + products.size()
+            );
 
-            // 5) Users + Customers + Sales linking products
-            String[] names = new String[]{
-                    "Alice Monroe", "Bob Patel", "Carol Nguyen", "David Chen",
-                    "Esha Roy", "Franklin King", "Grace Lee", "Hassan Ali",
-                    "Isha Kapoor", "Jorge Silva"
-            };
 
-            AtomicInteger userCounter = new AtomicInteger(4000);
-            AtomicInteger custCounter = new AtomicInteger(5000);
-            AtomicInteger saleCounter = new AtomicInteger(6000);
+            // =========================================================
+            // 4. CREATE AMC CHAINS
+            // =========================================================
 
-            int productIndex = 0;
+            seedAMCs(products);
 
-            for (int i = 0; i < names.length; i++) {
-                String name = names[i];
-                String userId = "user-" + userCounter.getAndIncrement();
-                String custId = "cust-" + custCounter.getAndIncrement();
+            System.out.println("Seed: AMC chains created.");
 
-                // create customer
-                Customer c = new Customer();
-                c.setCustId(custId);
-                c.setCustName(name + " Co");
-                customerRepository.save(c);
 
-                // create user mapped to customer
-                User u = new User();
-                u.setId(userId);
-                u.setName(name);
-                u.setEmail(name.toLowerCase().replaceAll("[^a-z]", ".") + "@example.com");
-                // All seeded users share the demo password - securely hashed using PasswordEncoder
-                String demoPassword = "Password123!";
-                u.setPassword(passwordEncoder.encode(demoPassword));
-                u.setCreatedAt(LocalDateTime.now().minusDays(30 + i));
-                u.setUpdatedAt(LocalDateTime.now().minusDays(1));
-                u.setCustomer(c);
-                userRepository.save(u);
+            // =========================================================
+            // 5. CREATE USERS + CUSTOMERS + SALES
+            // =========================================================
 
-                // number of sales per customer deterministic: some have multiple sales
-                int salesForCustomer = 2 + (i % 4); // 2..5
-                for (int s = 0; s < salesForCustomer; s++) {
-                    Sale sale = new Sale();
-                    sale.setSaleId("sale-" + saleCounter.getAndIncrement());
-                    sale.setSaleDate(LocalDate.now().minusMonths(1 + (i + s)));
+            seedUsersAndSales(products);
 
-                    // each sale contains 1..3 products
-                    int prodCount = 1 + ((i + s) % 3);
-                    for (int p = 0; p < prodCount; p++) {
-                        // pick product deterministically from products list
-                        Product prod = products.get(productIndex % products.size());
-                        sale.getProductList().add(prod);
-                        productIndex++;
-                    }
+            System.out.println("=================================================");
+            System.out.println("Seed: Database seeding completed successfully.");
+            System.out.println("=================================================");
 
-                    saleRepository.save(sale);
-
-                    // link customer -> sale
-                    c.getPurchases().add(sale);
-                    customerRepository.save(c);
-                }
-            }
-
-            System.out.println("Seed: Completed. Created users, customers, sales, products, warranties, AMCs, and offers.");
-            System.out.println("Seed: Demo password for all seeded users = Password123! (stored as BCrypt hash)");
+            System.out.println(
+                    "Seed: Demo password for all users = Password123!"
+            );
         };
     }
 
-    private AMCOffer buildOffer(String id, String type, int months, double price, String terms) {
-        AMCOffer o = new AMCOffer();
-        o.setOfferId(id);
-        o.setOfferType(type);
-        o.setOfferDurationMonths(months);
-        o.setOfferPrice(price);
-        o.setOfferTerms(terms);
-        return o;
+
+    // =============================================================
+    // AMC OFFERS
+    // =============================================================
+
+    private void seedOffers() {
+
+        seedDataRepository.createOffer(
+                "OFFER-BASIC",
+                "Basic",
+                6,
+                49.0,
+                "Limited remote support"
+        );
+
+        seedDataRepository.createOffer(
+                "OFFER-SILVER",
+                "Silver",
+                12,
+                99.0,
+                "Basic coverage"
+        );
+
+        seedDataRepository.createOffer(
+                "OFFER-GOLD",
+                "Gold",
+                24,
+                179.0,
+                "Extended parts and labor"
+        );
+
+        seedDataRepository.createOffer(
+                "OFFER-PREMIUM",
+                "Premium",
+                18,
+                199.0,
+                "Priority SLA"
+        );
+
+        seedDataRepository.createOffer(
+                "OFFER-PLAT",
+                "Platinum",
+                36,
+                299.0,
+                "Premium on-site support"
+        );
+    }
+
+
+    // =============================================================
+    // PRODUCTS + WARRANTIES
+    // =============================================================
+
+    private List<SeedProduct> seedProducts() {
+
+        List<SeedProduct> products = new ArrayList<>();
+
+        AtomicInteger serialCounter =
+                new AtomicInteger(1000);
+
+        AtomicInteger warrantyCounter =
+                new AtomicInteger(2000);
+
+        for (ProductCategory category : ProductCategory.values()) {
+
+            for (int i = 0; i < 6; i++) {
+
+                String serialNumber =
+                        category.getSerialPrefix()
+                                + "-"
+                                + serialCounter.getAndIncrement();
+
+                String productName =
+                        category.getDisplayName()
+                                + " Model "
+                                + (100 + i);
+
+                LocalDate createdDate =
+                        LocalDate.now()
+                                .minusMonths(
+                                        (long) i * 3
+                                                + (long) category.ordinal() * 2
+                                );
+
+                String warrantyId =
+                        "W-" + warrantyCounter.getAndIncrement();
+
+                LocalDate warrantyStartDate =
+                        createdDate.plusDays(7);
+
+                LocalDate warrantyEndDate =
+                        warrantyStartDate.plusMonths(
+                                category.getDefaultWarrantyMonths()
+                        );
+
+                /*
+                 * Product
+                 *    |
+                 *    | HAS_WARRANTY
+                 *    v
+                 * Warranty
+                 */
+                seedDataRepository.createProductWithWarranty(
+                        serialNumber,
+                        productName,
+                        createdDate,
+                        category.name(),
+                        warrantyId,
+                        warrantyStartDate,
+                        warrantyEndDate
+                );
+
+                products.add(
+                        new SeedProduct(
+                                serialNumber,
+                                warrantyId,
+                                warrantyEndDate
+                        )
+                );
+            }
+        }
+
+        return products;
+    }
+
+
+    // =============================================================
+    // AMC CHAINS
+    // =============================================================
+
+    private void seedAMCs(List<SeedProduct> products) {
+
+        AtomicInteger amcCounter =
+                new AtomicInteger(3000);
+
+        String[] offerIds = {
+                "OFFER-BASIC",
+                "OFFER-SILVER",
+                "OFFER-GOLD",
+                "OFFER-PREMIUM",
+                "OFFER-PLAT"
+        };
+
+        for (int i = 0; i < products.size(); i++) {
+
+            SeedProduct product = products.get(i);
+
+            int numberOfAMCs;
+
+            if (i % 5 == 0) {
+                numberOfAMCs = 3;
+            } else if (i % 3 == 0) {
+                numberOfAMCs = 2;
+            } else if (i % 7 == 0) {
+                numberOfAMCs = 1;
+            } else {
+                numberOfAMCs = 0;
+            }
+
+            LocalDate previousEnd =
+                    product.warrantyEndDate();
+
+            for (int a = 0; a < numberOfAMCs; a++) {
+
+                String amcId =
+                        "AMC-" + amcCounter.getAndIncrement();
+
+                LocalDate startDate =
+                        previousEnd.plusDays(1);
+
+                String offerId =
+                        offerIds[(i + a) % offerIds.length];
+
+                int durationMonths =
+                        getOfferDurationMonths(offerId);
+
+                LocalDate endDate =
+                        startDate
+                                .plusMonths(durationMonths)
+                                .minusDays(1);
+
+                /*
+                 * AMC -> AMCOffer
+                 */
+                seedDataRepository.createAMCWithOffer(
+                        amcId,
+                        startDate,
+                        endDate,
+                        offerId
+                );
+
+                /*
+                 * Warranty -> AMC
+                 */
+                seedDataRepository.linkWarrantyAMC(
+                        product.warrantyId(),
+                        amcId
+                );
+
+                previousEnd = endDate;
+            }
+        }
+    }
+
+
+    // =============================================================
+    // USERS + CUSTOMERS + SALES
+    // =============================================================
+
+    private void seedUsersAndSales(
+            List<SeedProduct> products
+    ) {
+
+        String[] names = {
+                "Alice Monroe",
+                "Bob Patel",
+                "Carol Nguyen",
+                "David Chen",
+                "Esha Roy",
+                "Franklin King",
+                "Grace Lee",
+                "Hassan Ali",
+                "Isha Kapoor",
+                "Jorge Silva"
+        };
+
+        AtomicInteger userCounter =
+                new AtomicInteger(4000);
+
+        AtomicInteger customerCounter =
+                new AtomicInteger(5000);
+
+        AtomicInteger saleCounter =
+                new AtomicInteger(6000);
+
+        int productIndex = 0;
+
+        String encodedPassword =
+                passwordEncoder.encode("Password123!");
+
+        for (int i = 0; i < names.length; i++) {
+
+            String name = names[i];
+
+            String userId =
+                    "user-" + userCounter.getAndIncrement();
+
+            String customerId =
+                    "cust-" + customerCounter.getAndIncrement();
+
+            String email =
+                    buildEmail(name);
+
+            LocalDateTime createdAt =
+                    LocalDateTime.now()
+                            .minusDays(30L + i);
+
+            LocalDateTime updatedAt =
+                    LocalDateTime.now()
+                            .minusDays(1);
+
+            /*
+             * User
+             *   |
+             *   | IS_CUSTOMER
+             *   v
+             * Customer
+             */
+            seedDataRepository.createUserWithCustomer(
+                    userId,
+                    name,
+                    email,
+                    encodedPassword,
+                    createdAt,
+                    updatedAt,
+                    customerId,
+                    name + " Co"
+            );
+
+            /*
+             * Each customer gets 2-5 sales.
+             */
+            int salesForCustomer =
+                    2 + (i % 4);
+
+            for (int s = 0;
+                 s < salesForCustomer;
+                 s++) {
+
+                String saleId =
+                        "sale-" + saleCounter.getAndIncrement();
+
+                LocalDate saleDate =
+                        LocalDate.now()
+                                .minusMonths(1L + i + s);
+
+                /*
+                 * Create the Sale and connect it to Customer.
+                 */
+                seedDataRepository.createSale(
+                        saleId,
+                        saleDate
+                );
+
+                seedDataRepository.linkCustomerSale(
+                        customerId,
+                        saleId
+                );
+
+                /*
+                 * Give each sale 1-3 products.
+                 *
+                 * This is important because the intended graph is:
+                 *
+                 * Customer
+                 *    |
+                 *    | PURCHASED
+                 *    v
+                 *  Sale
+                 *    |
+                 *    | OF_PRODUCT
+                 *    +------> Product
+                 *    |
+                 *    +------> Product
+                 *    |
+                 *    +------> Product
+                 */
+                int productsInSale =
+                        1 + ((i + s) % 3);
+
+                for (int p = 0;
+                     p < productsInSale;
+                     p++) {
+
+                    SeedProduct product =
+                            products.get(
+                                    productIndex
+                                            % products.size()
+                            );
+
+                    seedDataRepository.linkSaleProduct(
+                            saleId,
+                            product.serialNumber()
+                    );
+
+                    productIndex++;
+                }
+            }
+        }
+    }
+
+
+    // =============================================================
+    // HELPERS
+    // =============================================================
+
+    private String buildEmail(String name) {
+
+        return name
+                .toLowerCase()
+                .replaceAll("[^a-z]+", ".")
+                + "@example.com";
+    }
+
+
+    private int getOfferDurationMonths(
+            String offerId
+    ) {
+
+        return switch (offerId) {
+
+            case "OFFER-BASIC" ->
+                    6;
+
+            case "OFFER-SILVER" ->
+                    12;
+
+            case "OFFER-GOLD" ->
+                    24;
+
+            case "OFFER-PREMIUM" ->
+                    18;
+
+            case "OFFER-PLAT" ->
+                    36;
+
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unknown AMC offer: " + offerId
+                    );
+        };
+    }
+
+
+    // =============================================================
+    // SEED PRODUCT RECORD
+    // =============================================================
+
+    private record SeedProduct(
+            String serialNumber,
+            String warrantyId,
+            LocalDate warrantyEndDate
+    ) {
     }
 }

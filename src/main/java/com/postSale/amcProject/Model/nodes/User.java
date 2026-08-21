@@ -2,9 +2,9 @@ package com.postSale.amcProject.Model.nodes;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.time.LocalDateTime;
 
@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @GeneratedValue
     private String id;
 
     private String name;
@@ -31,9 +30,7 @@ public class User {
 
     private LocalDateTime updatedAt;
 
-    // Password reset fields - null when no reset is pending
-    private String resetToken;        // Random token sent in the reset email link
-
-    private LocalDateTime resetTokenExpiresAt; // When the token stops being valid
+    @Relationship(type = "IS_CUSTOMER", direction = Relationship.Direction.OUTGOING)
+    private Customer customer;
 }
 

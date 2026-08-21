@@ -10,7 +10,7 @@ import org.springframework.data.neo4j.core.schema.Node;
 @Setter
 @Node
 public class AMCOffer {
-    @Id @GeneratedValue
+    @Id
     private String offerId;
     private String offerType; // Silver / Gold
     private Integer offerDurationMonths;

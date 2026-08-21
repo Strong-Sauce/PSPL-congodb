@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AMCService {
@@ -20,33 +21,46 @@ public class AMCService {
 
     @Transactional
     public AMC createAMC(AMC amc) {
-        return amcRepository.save(amc);
+        amc.setAmcId(UUID.randomUUID().toString());
+        amcRepository.createAMC(amc.getAmcId(), amc.getAmcStartDate(), amc.getAmcEndDate());
+        if (amc.getAmcOfferList() != null) {
+            amc.getAmcOfferList().stream()
+                    .filter(offer -> offer != null && offer.getOfferId() != null)
+                    .forEach(offer -> amcRepository.linkOffer(amc.getAmcId(), offer.getOfferId()));
+        }
+        return amc;
     }
 
     @Transactional(readOnly = true)
     public List<AMC> getAllAMCs() {
-        return amcRepository.findAll();
+        return amcRepository.findAllAMCs();
     }
 
     @Transactional(readOnly = true)
     public Optional<AMC> getAMCById(String id) {
-        return amcRepository.findById(id);
+        return amcRepository.findAMCById(id);
     }
 
     @Transactional
     public AMC updateAMC(AMC amc) {
-        if (!amcRepository.existsById(amc.getAmcId())) {
+        if (!amcRepository.existsAMCById(amc.getAmcId())) {
             throw new ResourceNotFoundException("AMC", amc.getAmcId());
         }
-        return amcRepository.save(amc);
+        amcRepository.updateAMC(amc.getAmcId(), amc.getAmcStartDate(), amc.getAmcEndDate());
+        if (amc.getAmcOfferList() != null) {
+            amcRepository.clearOfferLinks(amc.getAmcId());
+            amc.getAmcOfferList().stream()
+                    .filter(offer -> offer != null && offer.getOfferId() != null)
+                    .forEach(offer -> amcRepository.linkOffer(amc.getAmcId(), offer.getOfferId()));
+        }
+        return amc;
     }
 
     @Transactional
     public void deleteAMC(String id) {
-        if (!amcRepository.existsById(id)) {
+        if (!amcRepository.existsAMCById(id)) {
             throw new ResourceNotFoundException("AMC", id);
         }
-        amcRepository.deleteById(id);
+        amcRepository.deleteAMCById(id);
     }
 }
-

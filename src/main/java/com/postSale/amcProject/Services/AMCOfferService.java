@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AMCOfferService {
@@ -20,33 +21,47 @@ public class AMCOfferService {
 
     @Transactional
     public AMCOffer createOffer(AMCOffer offer) {
-        return amcOfferRepository.save(offer);
+        offer.setOfferId(UUID.randomUUID().toString());
+        amcOfferRepository.createOffer(
+                offer.getOfferId(),
+                offer.getOfferType(),
+                offer.getOfferDurationMonths(),
+                offer.getOfferPrice(),
+                offer.getOfferTerms()
+        );
+        return offer;
     }
 
     @Transactional(readOnly = true)
     public List<AMCOffer> getAllOffers() {
-        return amcOfferRepository.findAll();
+        return amcOfferRepository.findAllOffers();
     }
 
     @Transactional(readOnly = true)
     public Optional<AMCOffer> getOfferById(String id) {
-        return amcOfferRepository.findById(id);
+        return amcOfferRepository.findOfferById(id);
     }
 
     @Transactional
     public AMCOffer updateOffer(AMCOffer offer) {
-        if (!amcOfferRepository.existsById(offer.getOfferId())) {
+        if (!amcOfferRepository.existsOfferById(offer.getOfferId())) {
             throw new ResourceNotFoundException("AMCOffer", offer.getOfferId());
         }
-        return amcOfferRepository.save(offer);
+        amcOfferRepository.updateOffer(
+                offer.getOfferId(),
+                offer.getOfferType(),
+                offer.getOfferDurationMonths(),
+                offer.getOfferPrice(),
+                offer.getOfferTerms()
+        );
+        return offer;
     }
 
     @Transactional
     public void deleteOffer(String id) {
-        if (!amcOfferRepository.existsById(id)) {
+        if (!amcOfferRepository.existsOfferById(id)) {
             throw new ResourceNotFoundException("AMCOffer", id);
         }
-        amcOfferRepository.deleteById(id);
+        amcOfferRepository.deleteOfferById(id);
     }
 }
-

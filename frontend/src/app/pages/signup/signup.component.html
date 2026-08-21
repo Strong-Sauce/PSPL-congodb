@@ -47,8 +47,19 @@
         />
       </div>
 
-      <button type="submit" class="btn-primary" [disabled]="submitting()">
-        @if (submitting()) { Creating account... } @else { Create Account }
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="submitting()"
+      >
+        @if (submitting()) {
+        <span class="loading-content">
+          <span class="spinner"></span>
+          Creating account...
+        </span>
+        } @else {
+        Create Account
+        }
       </button>
     </form>
 

@@ -16,22 +16,6 @@ export const routes: Routes = [
     canActivate: [guestGuard],
     loadComponent: () => import('./pages/signup/signup.component').then((m) => m.SignupComponent),
   },
-  {
-    path: 'forgot-password',
-    canActivate: [guestGuard],
-    loadComponent: () =>
-      import('./pages/forgot-password/forgot-password.component').then(
-        (m) => m.ForgotPasswordComponent,
-      ),
-  },
-  {
-    path: 'reset-password',
-    // No guestGuard here — user must be able to reset without being logged in
-    loadComponent: () =>
-      import('./pages/reset-password/reset-password.component').then(
-        (m) => m.ResetPasswordComponent,
-      ),
-  },
 
   // ─── PROTECTED ROUTES (login required) ────────────────────────────────────
   // authGuard redirects unauthenticated users to '/login'
@@ -42,11 +26,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent),
   },
   {
-    path: 'products/new',
+    path: 'purchases/new',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./pages/product-create/product-create.component').then(
-        (m) => m.ProductCreateComponent,
+      import('./pages/purchase-create/purchase-create.component').then(
+        (m) => m.PurchaseCreateComponent,
       ),
   },
   {

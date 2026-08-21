@@ -27,9 +27,9 @@ export class App {
   showSidebar = computed(() => {
     const path = this.currentPath();
     const onAuthPage = path.startsWith('/login')
-      || path.startsWith('/signup')
-      || path.startsWith('/forgot-password')
-      || path.startsWith('/reset-password');
+      || path.startsWith('/signup');
+      // || path.startsWith('/forgot-password')
+      // || path.startsWith('/reset-password');
     return this.isAuthenticated() && !onAuthPage;
   });
 

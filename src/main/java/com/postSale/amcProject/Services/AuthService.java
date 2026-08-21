@@ -16,12 +16,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.postSale.amcProject.Model.nodes.Customer;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+
+import static java.time.LocalDateTime.now;
 
 /**
  * AuthService contains all authentication business logic:
@@ -35,16 +39,14 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EmailService emailService;
 
     // Base URL used to build the password reset link (e.g. http://localhost:4200)
     @Value("${app.base-url:http://localhost:4200}")
     private String appBaseUrl;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.emailService = emailService;
     }
 
     // ─── SIGNUP ────────────────────────────────────────────────────────────────
@@ -61,21 +63,36 @@ public class AuthService {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        // Build and save the user node
-        LocalDateTime now = LocalDateTime.now();
-        User user = new User();
-        user.setName(request.name().trim());
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(request.password())); // BCrypt hash
-        user.setCreatedAt(now);
-        user.setUpdatedAt(now);
+        String name = request.name().trim();
+        String passwordHash = passwordEncoder.encode(request.password());
 
-        User saved = userRepository.save(user);
+        String userId = UUID.randomUUID().toString();
+        String customerId = UUID.randomUUID().toString();
+
+        LocalDateTime createdAt = now();
+
+        userRepository.createUser(
+                userId,
+                name,
+                email,
+                passwordHash,
+                createdAt,
+                createdAt,
+                customerId
+        );
+
+        User user = new User();
+        user.setId(userId);
+        user.setName(name);
+        user.setEmail(email);
+        user.setPassword(passwordHash);
+        user.setCreatedAt(createdAt);
+        user.setUpdatedAt(createdAt);
 
         // Automatically log the user in after signup
-        createSession(saved, httpRequest);
+        createSession(user, httpRequest);
 
-        return new AuthResponse("Signup successful", toDto(saved));
+        return new AuthResponse("Signup successful", toDto(user));
     }
 
     // ─── LOGIN ─────────────────────────────────��───────────────────────────────
@@ -121,65 +138,7 @@ public class AuthService {
         return userRepository.findByEmail(email).map(this::toDto);
     }
 
-    // ─── FORGOT PASSWORD ───────────────────────────────────────────────────────
-
-    /**
-     * Generates a secure reset token, saves it on the user, and sends a reset email.
-     */
-    @Transactional
-    public MessageResponse forgotPassword(ForgotPasswordRequest request) {
-        String email = normalizeEmail(request.email());
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Email not found"));
-
-        // Generate a secure random token (URL-safe base64, 32 bytes = 43 chars)
-        String token = generateSecureToken();
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(RESET_TOKEN_EXPIRY_MINUTES);
-
-        // Save the token and expiry on the user node
-        user.setResetToken(token);
-        user.setResetTokenExpiresAt(expiresAt);
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
-
-        // Build the reset link and send it
-        String resetUrl = appBaseUrl + "/reset-password?token=" + token;
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getName(), resetUrl, expiresAt);
-
-        return new MessageResponse("Password reset link has been sent to your email");
-    }
-
-    // ─── RESET PASSWORD ────────────────────────────────────────────────────────
-
-    /**
-     * Validates the reset token, then updates the user's password.
-     */
-    @Transactional
-    public MessageResponse resetPassword(ResetPasswordRequest request) {
-        // Find user by token
-        User user = userRepository.findByResetToken(request.token())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid reset token"));
-
-        // Check if token has expired
-        if (user.getResetTokenExpiresAt() == null
-                || LocalDateTime.now().isAfter(user.getResetTokenExpiresAt())) {
-            throw new IllegalArgumentException("Expired reset token");
-        }
-
-        // Update password with BCrypt hash
-        user.setPassword(passwordEncoder.encode(request.newPassword()));
-
-        // Clear the reset token so it can't be reused
-        user.setResetToken(null);
-        user.setResetTokenExpiresAt(null);
-        user.setUpdatedAt(LocalDateTime.now());
-        userRepository.save(user);
-
-        return new MessageResponse("Password has been reset successfully. Please log in.");
-    }
-
-    // ─── LOGOUT ─────────────────────────────────────────────────────────���──────
+    // ─── LOGOUT ───────────────────────────────────────────────────────────────
 
     /**
      * Destroys the server-side session and clears the security context.
