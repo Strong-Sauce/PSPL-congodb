@@ -629,13 +629,11 @@ Configure credentials
         ↓
 Enable seed data
         ↓
-Start backend
+Start application (single command)
         ↓
 Seed script creates graph
         ↓
 Database populated
-        ↓
-Start frontend
         ↓
 Use application
 ```
@@ -714,6 +712,14 @@ $env:NEO4J_USERNAME="your-username"
 $env:NEO4J_PASSWORD="your-password"
 ```
 
+Persist the variables for future terminal sessions:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable('NEO4J_URI','your-cognodb-uri','User')
+[System.Environment]::SetEnvironmentVariable('NEO4J_USERNAME','your-username','User')
+[System.Environment]::SetEnvironmentVariable('NEO4J_PASSWORD','your-password','User')
+```
+
 Example:
 
 ```text
@@ -723,6 +729,8 @@ NEO4J_PASSWORD=...
 ```
 
 The application uses the Neo4j-compatible connection configuration provided to Spring Data Neo4j.
+
+> If you set user-level variables, restart your terminal/IDE before starting the application.
 
 ---
 
@@ -750,56 +758,38 @@ This prevents accidental reseeding when starting the application normally.
 
 ---
 
-## 6. Start the backend
+# ▶️ Running the Application
 
-From the backend project directory:
+## 6. Start the application (single command)
 
-```bash
-mvnw spring-boot:run
-```
+From the project root:
 
 On Windows:
 
 ```powershell
-.\mvnw.cmd spring-boot:run
+.\start.bat
 ```
 
-The Spring Boot application runs on:
+On Linux/macOS:
 
-```text
-http://localhost:8080
+```bash
+./start.sh
 ```
+
+This one command:
+
+1. Builds backend + frontend.
+2. Packages Angular into the Spring Boot JAR.
+3. Starts the application.
 
 ---
 
-## 7. Start the frontend
-
-Open another terminal and navigate to the Angular application:
-
-```bash
-npm install
-```
-
-Then:
-
-```bash
-npm start
-```
-
-The Angular development server runs on:
-
-```text
-http://localhost:4200
-```
-
----
-
-## 8. Access the application
+## 7. Access the application
 
 Open:
 
 ```text
-http://localhost:4200
+http://localhost:8080
 ```
 
 You can then:
