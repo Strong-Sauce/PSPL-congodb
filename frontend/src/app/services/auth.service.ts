@@ -1,98 +1,306 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError, map, shareReplay, tap } from 'rxjs/operators';
+
 import {
-  AuthResponse,
+  User,
   LoginRequest,
-  MessageResponse,
   SignupRequest,
-} from '../models/auth.model';
-import { User } from '../models/user.model';
-import { environment } from '../../environments/environment';
+  AuthResponse,
+} from '../models';
 
-/**
- * AuthService is the single source of truth for authentication state in the frontend.
- *
- * - currentUser: Angular signal that holds the logged-in user (or null if guest)
- * - isAuthenticated: computed signal derived from currentUser
- * - All auth API calls go through this service
- */
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class AuthService {
+
   private readonly http = inject(HttpClient);
-  private readonly router = inject(Router);
 
-  // Base URL for auth endpoints (e.g. http://localhost:8080 in dev, empty in prod)
-  private readonly baseUrl = `${environment.apiBaseUrl}/auth`;
+  private readonly baseUrl = 'http://localhost:8080/api/auth';
 
-  // Signal: holds the current user or null. Components read this reactively.
-  currentUser = signal<User | null>(null);
+  // ============================================================
+  // AUTH STATE
+  // ============================================================
 
-  // Computed signal: true if a user is logged in
-  isAuthenticated = computed(() => this.currentUser() !== null);
+  private readonly _currentUser = signal<User | null>(null);
 
-  // ─── SIGNUP ────────────────────────────────────────────────────────────────
+  readonly currentUser = this._currentUser.asReadonly();
 
-  signup(payload: SignupRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/signup`, payload).pipe(
-      tap((res) => this.currentUser.set(res.user)) // Set user signal on success
-    );
-  }
+  readonly isAuthenticated = computed(
+    () => this._currentUser() !== null
+  );
 
-  // ─── LOGIN ─────────────────────────────────────────────────────────────────
 
-  login(payload: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/login`, payload).pipe(
-      tap((res) => this.currentUser.set(res.user)) // Set user signal on success
-    );
-  }
+  // ============================================================
+  // SHARED SESSION REQUEST
+  // ============================================================
 
-  // ─── CURRENT USER (session restore) ────────────────────────────────────────
-
-  /**
-   * Fetches the current user from the backend using the active session cookie.
-   * Called on app startup to restore the session after a page refresh.
+  /*
+   * Holds the currently running /me request.
+   *
+   * This is important because App + authGuard + guestGuard
+   * can all ask for the current user during application startup.
+   *
+   * Without sharing, each caller would create another HTTP request.
    */
-  fetchCurrentUser(): Observable<User | null> {
-    return this.http.get<User>(`${this.baseUrl}/me`).pipe(
-      tap((user) => this.currentUser.set(user)),
-      map((user) => user),
-      catchError(() => {
-        // 401 = not logged in, that's fine — just set user to null
-        this.currentUser.set(null);
-        return of(null);
-      })
-    );
-  }
+  private currentUserRequest$: Observable<User | null> | null = null;
+
+
+  // ============================================================
+  // SESSION RESTORE
+  // ============================================================
 
   /**
-   * Called once on app startup in app.ts.
-   * Restores session so a page refresh doesn't log the user out.
+   * Restores the current session when the Angular application starts.
+   *
+   * App calls this once during startup.
+   *
+   * The request is shared with authGuard / guestGuard through
+   * currentUserRequest$, so startup does NOT create duplicate /me calls.
    */
   initSession(): void {
-    this.fetchCurrentUser().subscribe();
+    this.fetchCurrentUser().subscribe({
+      error: () => {
+        // fetchCurrentUser already converts failures to null.
+      }
+    });
   }
 
-  // ─── LOGOUT ─────────────────────────────────────────────────────────────────
+
+  // ============================================================
+  // CURRENT USER
+  // ============================================================
 
   /**
-   * Calls the backend to destroy the session, then clears the frontend state.
+   * Returns the currently authenticated user.
+   *
+   * Behaviour:
+   *
+   * 1. User already known locally
+   *    -> return immediately.
+   *
+   * 2. /me request already running
+   *    -> reuse the same request.
+   *
+   * 3. Otherwise
+   *    -> make exactly one /me request.
+   */
+  fetchCurrentUser(): Observable<User | null> {
+
+    // ------------------------------------------------------------
+    // Already authenticated locally
+    // ------------------------------------------------------------
+
+    const user = this.currentUser();
+
+    if (user !== null) {
+      return of(user);
+    }
+
+
+    // ------------------------------------------------------------
+    // A /me request is already running
+    // ------------------------------------------------------------
+
+    if (this.currentUserRequest$ !== null) {
+      return this.currentUserRequest$;
+    }
+
+
+    // ------------------------------------------------------------
+    // Create the single shared /me request
+    // ------------------------------------------------------------
+
+    this.currentUserRequest$ = this.http
+      .get<User>(`${this.baseUrl}/me`, {
+        withCredentials: true
+      })
+      .pipe(
+
+        // Successful session restore
+        tap(user => {
+          this._currentUser.set(user);
+        }),
+
+        // No session / backend unavailable
+        catchError(err => {
+
+          console.error(
+            'Failed to restore authentication session:',
+            err
+          );
+
+          this._currentUser.set(null);
+
+          return of(null);
+        }),
+
+        /*
+         * Critical:
+         *
+         * Multiple subscribers receive the same HTTP response.
+         * Therefore:
+         *
+         * App
+         * authGuard
+         * guestGuard
+         *
+         * can all subscribe without generating multiple /me requests.
+         */
+        shareReplay({
+          bufferSize: 1,
+          refCount: false
+        })
+      );
+
+    return this.currentUserRequest$;
+  }
+
+
+  // ============================================================
+  // LOGIN
+  // ============================================================
+
+  /**
+   * Logs the user in.
+   *
+   * Backend response:
+   *
+   * {
+   *   message: "Login successful",
+   *   user: {
+   *     id,
+   *     name,
+   *     email
+   *   }
+   * }
+   *
+   * The component only needs the User object, so this method
+   * maps AuthResponse -> User.
+   */
+  login(request: LoginRequest): Observable<User> {
+
+    return this.http
+      .post<AuthResponse>(
+        `${this.baseUrl}/login`,
+        request,
+        {
+          withCredentials: true
+        }
+      )
+      .pipe(
+
+        map(response => response.user),
+
+        tap(user => {
+          this.setCurrentUser(user);
+        })
+      );
+  }
+
+
+  // ============================================================
+  // SIGNUP
+  // ============================================================
+
+  /**
+   * Registers a new user.
+   *
+   * Backend automatically creates the session after signup.
+   *
+   * Therefore we immediately store response.user as the
+   * authenticated frontend user.
+   */
+  signup(request: SignupRequest): Observable<User> {
+
+    return this.http
+      .post<AuthResponse>(
+        `${this.baseUrl}/signup`,
+        request,
+        {
+          withCredentials: true
+        }
+      )
+      .pipe(
+
+        map(response => response.user),
+
+        tap(user => {
+          this.setCurrentUser(user);
+        })
+      );
+  }
+
+
+  // ============================================================
+  // SET CURRENT USER
+  // ============================================================
+
+  /**
+   * Updates the frontend authentication state.
+   *
+   * Also prevents another /me call because the authenticated
+   * user is now already known.
+   */
+  setCurrentUser(user: User): void {
+
+    this._currentUser.set(user);
+
+    this.currentUserRequest$ = of(user);
+  }
+
+
+  // ============================================================
+  // LOGOUT
+  // ============================================================
+
+  /**
+   * Logs out from the backend and clears local authentication.
    */
   logout(): Observable<void> {
-    return this.http.post<MessageResponse>(`${this.baseUrl}/logout`, {}).pipe(
-      tap(() => {
-        this.currentUser.set(null); // Clear user signal
-        void this.router.navigate(['/login']);
-      }),
-      map(() => void 0),
-      catchError(() => {
-        // Even if the API call fails, clear local state and redirect
-        this.currentUser.set(null);
-        void this.router.navigate(['/login']);
-        return of(void 0);
-      })
-    );
+
+    return this.http
+      .post<void>(
+        `${this.baseUrl}/logout`,
+        {},
+        {
+          withCredentials: true
+        }
+      )
+      .pipe(
+
+        tap(() => {
+          this.clearCurrentUser();
+        }),
+
+        /*
+         * Even if the backend logout fails, the frontend should
+         * not remain in an authenticated state.
+         */
+        catchError(err => {
+
+          console.error(
+            'Logout request failed:',
+            err
+          );
+
+          this.clearCurrentUser();
+
+          return of(void 0);
+        })
+      );
+  }
+
+
+  // ============================================================
+  // CLEAR AUTH STATE
+  // ============================================================
+
+  clearCurrentUser(): void {
+
+    this._currentUser.set(null);
+
+    this.currentUserRequest$ = null;
   }
 }
-

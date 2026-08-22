@@ -1,36 +1,38 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { Observable, map, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+
 import { AuthService } from '../services/auth.service';
 
-/**
- * authGuard protects pages that require the user to be logged in.
- *
- * Flow:
- * 1. If user signal is already set (e.g. just logged in) → allow
- * 2. Otherwise call /api/auth/me to check for an existing session
- * 3. If session exists → allow
- * 4. If not → redirect to /login
- */
-export const authGuard: CanActivateFn = (): Observable<boolean> => {
+export const authGuard: CanActivateFn = (): Observable<boolean | ReturnType<Router['createUrlTree']>> => {
+
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  // Already known to be logged in — allow immediately
+  /*
+   * If the user is already known locally,
+   * don't make another /me request.
+   */
   if (authService.currentUser() !== null) {
     return of(true);
   }
 
-  // Try to restore session from backend
+  /*
+   * Otherwise restore/check the session.
+   *
+   * AuthService handles request sharing, so if another
+   * guard is also checking authentication, it will reuse
+   * the same /me request.
+   */
   return authService.fetchCurrentUser().pipe(
-    map((user) => {
-      if (user) {
-        return true; // Session valid
-      }
-      // Not logged in — redirect to login page
-      void router.navigate(['/login']);
-      return false;
+
+    map(user => {
+      return user !== null ? true : router.createUrlTree(['/login']);
+    }),
+
+    catchError(() => {
+      return of(router.createUrlTree(['/login']));
     })
   );
 };
-

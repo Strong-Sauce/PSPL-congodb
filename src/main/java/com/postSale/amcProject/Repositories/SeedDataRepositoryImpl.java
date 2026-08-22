@@ -1,6 +1,7 @@
 package com.postSale.amcProject.Repositories;
 
 import org.springframework.data.neo4j.core.Neo4jClient;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -11,8 +12,8 @@ public class SeedDataRepositoryImpl implements SeedDataRepository {
 
     private final Neo4jClient neo4jClient;
 
-    public SeedDataRepositoryImpl(Neo4jClient neo4jClient) {
-        this.neo4jClient = neo4jClient;
+    public SeedDataRepositoryImpl(ObjectProvider<Neo4jClient> neo4jClientProvider) {
+        this.neo4jClient = neo4jClientProvider.getIfAvailable();
     }
 
     // ============================================================
