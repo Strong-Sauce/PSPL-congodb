@@ -9,6 +9,7 @@ import {
   SignupRequest,
   AuthResponse,
 } from '../models';
+import {environment} from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +18,7 @@ export class AuthService {
 
   private readonly http = inject(HttpClient);
 
-  private readonly baseUrl = 'http://localhost:8080/api/auth';
+  private readonly baseUrl = `${environment.apiBaseUrl}/auth`;
 
   // ============================================================
   // AUTH STATE
